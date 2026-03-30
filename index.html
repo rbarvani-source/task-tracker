@@ -2132,7 +2132,7 @@ function renderItems() {
       + '<td>'
       + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')" title="Edit">Edit</button> '
       + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled title="Need 2+ properties"' : ' title="Reassign"') + '>Move</button> '
-      + '<button class="btn btn-danger btn-sm" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
+      + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
       + '</td>'
       + '<td>' + buildInlinePropSelect(i) + '</td>'
       + '</tr>';
@@ -2143,15 +2143,22 @@ function renderItems() {
       + '<input type="checkbox" class="done-check" data-id="' + i.id + '"' + (i.status === 'Done' ? ' checked' : '') + ' onchange="inlineToggleDone(this)" style="width:20px;height:20px;flex-shrink:0">'
       + '<span class="tmc-name ' + (STATUS_CLASSES[i.status]||'') + '" style="color:' + propColor + '" onclick="openEditModal(\'' + i.id + '\')">' + esc(i.name) + '</span>'
       + '</div>'
+      + renderSubtaskBadge(i)
+      + (i.description ? '<div style="margin:4px 0;font-size:13px;color:#888;line-height:1.4;word-break:break-word">' + esc(i.description) + '</div>' : '')
       + '<div class="tmc-due" style="color:' + dueColor + '">' + dueDateDisplay + '</div>'
       + '<div class="tmc-meta">'
       + '<span class="badge" style="background:' + propColor + '15;color:' + propColor + ';font-size:11px">' + esc(propName) + '</span>'
       + (i.recurrence && i.recurrence !== 'none' ? ' <span class="badge badge-purple" style="font-size:10px">' + i.recurrence + '</span>' : '')
+      + renderNoteCount(i)
       + '</div>'
+      + renderAlarm(i)
+      + (getItemUrls(i).length > 0 ? '<div style="margin:2px 0">' + renderUrl(getItemUrls(i)) + '</div>' : '')
       + (i.phone ? '<a href="tel:' + esc(i.phone) + '" class="task-phone-link">' + esc(i.phone) + '</a>' : '')
+      + renderPhotos(i.photos)
       + '<div class="tmc-actions">'
       + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')">Edit</button>'
-      + '<button class="btn btn-danger btn-sm" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled' : '') + '>Move</button>'
+      + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
       + '</div>'
       + '</div>';
     return groupHeader + desktopRow + mobileCard;

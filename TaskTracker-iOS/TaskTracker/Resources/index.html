@@ -1696,7 +1696,7 @@ function renderItems() {
       + '<td>'
       + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')" title="Edit">Edit</button> '
       + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled title="Need 2+ properties"' : ' title="Reassign"') + '>Move</button> '
-      + '<button class="btn btn-danger btn-sm" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
+      + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
       + '</td></tr>';
   }).join('');
   el.innerHTML = '<table><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllBulk(this)"></th><th>Task</th><th>Property</th><th>Due Date</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
