@@ -4,6 +4,9 @@ import WebKit
 struct TaskWebView: UIViewRepresentable {
     @Binding var isLoading: Bool
 
+    // Live site URL — always load from here so the app stays in sync
+    private let liveURL = URL(string: "https://rbarvani-source.github.io/task-tracker/")!
+
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
@@ -55,10 +58,9 @@ struct TaskWebView: UIViewRepresentable {
         // Allow back/forward swipe gestures
         webView.allowsBackForwardNavigationGestures = false
 
-        // Load the bundled index.html
-        if let htmlURL = Bundle.main.url(forResource: "index", withExtension: "html") {
-            webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
-        }
+        // Load the live remote site (falls back to bundled copy if offline)
+        let request = URLRequest(url: liveURL, cachePolicy: .reloadRevalidatingCacheData, timeoutInterval: 8)
+        webView.load(request)
 
         return webView
     }
@@ -67,6 +69,7 @@ struct TaskWebView: UIViewRepresentable {
 
     class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var parent: TaskWebView
+        private var didFallback = false
 
         init(_ parent: TaskWebView) {
             self.parent = parent
@@ -78,7 +81,28 @@ struct TaskWebView: UIViewRepresentable {
             }
         }
 
+        // If the remote load fails (offline / timeout), fall back to the bundled index.html
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            if !didFallback {
+                didFallback = true
+                if let htmlURL = Bundle.main.url(forResource: "index", withExtension: "html") {
+                    webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+                    return
+                }
+            }
+            DispatchQueue.main.async {
+                self.parent.isLoading = false
+            }
+        }
+
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            if !didFallback {
+                didFallback = true
+                if let htmlURL = Bundle.main.url(forResource: "index", withExtension: "html") {
+                    webView.loadFileURL(htmlURL, allowingReadAccessTo: htmlURL.deletingLastPathComponent())
+                    return
+                }
+            }
             DispatchQueue.main.async {
                 self.parent.isLoading = false
             }

@@ -1,0 +1,12 @@
+name = "t"
+main = "worker.js"
+compatibility_date = "2024-12-01"
+
+# Serve static assets (index.html, sw.js, icons, manifest)
+[assets]
+directory = "."
+
+# KV namespace for sync data
+[[kv_namespaces]]
+binding = "TRACKER_KV"
+id = "c23c76bcf9b64059bbb9f6b98d374ccb"

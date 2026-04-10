@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tasks">
+<meta name="theme-color" content="#1a1a2e">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <title>Tasks</title>
 <style>
   :root { --bg: #f0f2f5; --card: #fff; --text: #1a1a2e; --text2: #555; --text3: #888; --border: #eee; --border2: #ddd; --hover: #fafafa; --input-bg: #fff; }
@@ -61,6 +66,23 @@
   .inline-task-name { border: 1px solid transparent; background: transparent; padding: 2px 6px; font-size: 14px; font-weight: 700; font-family: inherit; width: 100%; min-width: 150px; border-radius: 4px; transition: border-color 0.2s, background 0.2s; }
   .inline-task-name:hover { border-color: var(--border2); }
   .inline-task-name:focus { outline: none; border-color: #1a73e8; background: var(--input-bg); box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+
+  .done-check { width: 20px; height: 20px; cursor: pointer; accent-color: #1e8e3e; }
+
+  .expandable-desc { resize: none; overflow: hidden; min-height: 38px; transition: min-height 0.2s, padding 0.2s; }
+  .expandable-desc.expanded { min-height: 120px; resize: vertical; overflow: auto; }
+
+  .task-desc-toggle { font-size: 13px; color: #888; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; max-width: 400px; transition: all 0.2s; }
+  .task-desc-toggle:hover { color: #555; }
+  .task-desc-toggle.expanded { -webkit-line-clamp: unset; overflow: visible; white-space: pre-wrap; max-width: none; color: #444; background: #f8f9fa; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #1a73e8; margin-top: 4px; }
+
+  .inline-due-date { border: 1px solid transparent; background: transparent; padding: 2px 4px; font-size: 13px; font-family: inherit; border-radius: 4px; transition: border-color 0.2s, background 0.2s; width: 100%; min-width: 140px; cursor: pointer; }
+  .inline-due-date:hover { border-color: var(--border2); }
+  .inline-due-date:focus { outline: none; border-color: #1a73e8; background: var(--input-bg); box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
+
+  .inline-prop-select { transition: border-color 0.2s, background 0.2s; }
+  .inline-prop-select:hover { border-color: var(--border2) !important; background: var(--hover) !important; }
+  .inline-prop-select:focus { outline: none; border-color: #1a73e8 !important; background: var(--input-bg) !important; box-shadow: 0 0 0 2px rgba(26,115,232,0.15); }
   input, select, textarea { padding: 10px 12px; border: 1px solid var(--border2); background: var(--input-bg); color: var(--text); border-radius: 6px; font-size: 14px; font-family: inherit; transition: border-color 0.2s; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: #1a1a2e; box-shadow: 0 0 0 3px rgba(26,26,46,0.1); }
   textarea { resize: vertical; min-height: 60px; }
@@ -152,6 +174,9 @@
   .task-url { font-size: 12px; word-break: break-all; }
   .task-url a { color: #1a73e8; text-decoration: none; }
   .task-url a:hover { text-decoration: underline; }
+  .task-phone-link { font-size: 12px; color: #27ae60; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .task-phone-link::before { content: '\260E'; }
+  .task-phone-link:hover { text-decoration: underline; }
 
   .task-photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   .task-photos img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #eee; transition: transform 0.15s; }
@@ -180,38 +205,80 @@
   .lightbox-overlay.active { display: flex; }
   .lightbox-overlay img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 4px 30px rgba(0,0,0,0.5); }
 
-  /* iOS safe area support */
-  @supports (padding: env(safe-area-inset-top)) {
-    .header { padding-top: calc(12px + env(safe-area-inset-top)); }
-    .container { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-    .alarm-banner { padding-top: calc(16px + env(safe-area-inset-top)); }
-  }
-
-  /* Touch-friendly tap targets for iOS */
-  .st-textarea { min-height: 20px !important; font-size: 13px !important; width: 100%; word-break: break-word; white-space: pre-wrap; }
-
-  @media (pointer: coarse) {
-    .btn { min-height: 44px; min-width: 44px; }
-    .btn-sm { min-height: 36px; }
-    .tab { min-height: 44px; }
-    input, select, textarea { min-height: 44px; font-size: 16px; }
-    textarea.st-textarea { min-height: 20px !important; font-size: 13px !important; }
-    td { padding: 14px 12px; }
-    .bulk-check { width: 20px; height: 20px; }
-  }
+  /* Mobile card styles */
+  .task-mobile-card { display: none; }
 
   @media (max-width: 768px) {
     .header { padding: 16px; }
     .header h1 { font-size: 18px; }
-    .container { padding: 16px; }
+    .container { padding: 10px; }
     .form-row { flex-direction: column; }
     .form-group { min-width: unset; }
-    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .stat-card { padding: 14px; }
+    .stat-card .stat-value { font-size: 22px; }
     .tabs { flex-wrap: wrap; }
-    .tab { min-width: 45%; }
-    td, th { padding: 8px 6px; font-size: 13px; }
+    .tab { min-width: 30%; padding: 10px 8px; font-size: 13px; }
     .kanban { flex-direction: column; }
     .kanban-col { min-width: unset; }
+    .card { padding: 14px; margin-bottom: 10px; }
+    .card h2 { font-size: 16px; margin-bottom: 12px; }
+    .filter-bar { gap: 8px; }
+    .filter-bar input, .filter-bar select { max-width: unset; width: 100%; }
+
+    /* Hide desktop table, show mobile cards */
+    .task-desktop-table { display: none !important; }
+    .task-desktop-row { display: none !important; }
+    .task-mobile-card {
+      display: block;
+      background: var(--card);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      border-left: 3px solid #ccc;
+    }
+    .task-mobile-card.priority-high { border-left-color: #d93025; }
+    .task-mobile-card.priority-medium { border-left-color: #f9ab00; }
+    .task-mobile-card.priority-low { border-left-color: #1e8e3e; }
+    .tmc-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .tmc-name {
+      font-weight: 700;
+      font-size: 15px;
+      flex: 1;
+      cursor: pointer;
+      line-height: 1.3;
+    }
+    .tmc-name.status-done { text-decoration: line-through; opacity: 0.6; }
+    .tmc-due {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      padding-left: 30px;
+    }
+    .tmc-meta {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding-left: 30px;
+      margin-bottom: 6px;
+    }
+    .tmc-actions {
+      display: flex;
+      gap: 8px;
+      padding-left: 30px;
+      margin-top: 8px;
+    }
+    .tmc-actions .btn { flex: 1; justify-content: center; }
+    .task-mobile-card .task-phone-link { padding-left: 30px; display: block; margin-top: 4px; }
+
+    /* Hide bulk bar on mobile for simplicity */
+    #bulkBar { display: none !important; }
   }
 
   .cal-cell { min-height: 80px; background: var(--card); border: 1px solid #eee; padding: 4px; border-radius: 4px; font-size: 11px; overflow: hidden; }
@@ -221,6 +288,25 @@
   .cal-day { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
   .cal-task { padding: 1px 4px; margin: 1px 0; border-radius: 3px; font-size: 10px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
   .cal-task:hover { opacity: 0.8; }
+
+  /* iOS safe area support */
+  @supports (padding: env(safe-area-inset-top)) {
+    .header { padding-top: calc(12px + env(safe-area-inset-top)); }
+    .container { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .alarm-banner { padding-top: calc(16px + env(safe-area-inset-top)); }
+  }
+
+  .st-textarea { min-height: 20px !important; font-size: 13px !important; width: 100%; word-break: break-word; white-space: pre-wrap; }
+
+  /* Touch-friendly targets for mobile */
+  @media (pointer: coarse) {
+    .btn { min-height: 44px; }
+    .btn-sm { min-height: 36px; }
+    .tab { min-height: 44px; }
+    input, select, textarea { min-height: 44px; font-size: 16px; }
+    textarea.st-textarea { min-height: 20px !important; font-size: 13px !important; }
+    .bulk-check { width: 20px; height: 20px; }
+  }
 
   @media print {
     .header, .sync-bar, .tabs, .filter-bar, .btn, #bulkBar, #smsBar { display: none !important; }
@@ -255,13 +341,15 @@
 <div class="container">
   <div class="sync-bar" id="syncBar">
     <span style="font-size:13px;font-weight:600;color:#555">SYNC</span>
-    <input type="text" id="syncWorkerUrl" placeholder="Worker URL" style="max-width:260px">
     <input type="text" id="syncKey" placeholder="Sync key (4+ chars)" minlength="4">
     <button class="btn btn-primary" id="syncToggleBtn" onclick="toggleSync()">Connect</button>
     <button class="btn btn-outline" id="syncPullBtn" onclick="pullFromCloud()" style="display:none">Pull</button>
     <button class="btn btn-outline" id="syncPushBtn" onclick="pushToCloud()" style="display:none">Push</button>
+    <button class="btn btn-warning" id="syncForcePushBtn" onclick="forcePush()" style="display:none" title="Overwrite cloud with this device's data">Force Push</button>
+    <button class="btn btn-warning" id="syncForcePullBtn" onclick="forcePull()" style="display:none" title="Overwrite this device with cloud data">Force Pull</button>
     <button class="btn btn-outline" onclick="testEmail()" title="Send a test email to verify notifications work">Test Email</button>
     <span class="sync-status" id="syncStatus"><span class="sync-dot disconnected"></span>Not connected</span>
+    <input type="hidden" id="syncWorkerUrl">
   </div>
   <div class="sync-bar" id="smsBar" style="margin-top:2px">
     <span style="font-size:13px;font-weight:600;color:#555">TXT</span>
@@ -285,12 +373,12 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <button class="btn btn-outline btn-sm" onclick="calNavMonth(-1)">&larr; Prev</button>
-        <h2 id="calMonthTitle" style="margin:0"></h2>
+        <h2 id="calMonthTitle" style="margin:0" aria-label="Current calendar month"></h2>
         <button class="btn btn-outline btn-sm" onclick="calNavMonth(1)">Next &rarr;</button>
       </div>
       <div id="calendarGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
       <div style="margin-top:16px">
-        <h3 style="font-size:14px;color:#888;margin-bottom:8px">Unscheduled Tasks</h3>
+        <h2 style="font-size:14px;color:#888;margin-bottom:8px">Unscheduled Tasks</h2>
         <div id="calUnscheduled"></div>
       </div>
     </div>
@@ -312,7 +400,7 @@
   <div class="panel" id="panel-templates">
     <div class="card">
       <h2>Task Templates</h2>
-      <p style="color:#888;font-size:13px;margin-bottom:16px">Save common task configurations as templates. Use "Save as Template" in the Edit Task modal, or click "Use" to pre-fill the Add Task form.</p>
+      <p style="color:#888;font-size:13px;margin-bottom:16px">Save common task configurations as templates. Use the "Save as Template" option in the Edit Task dialog to create one. Click "Use" on any template to pre-fill the Add New Task form.</p>
       <div id="templatesTable"></div>
     </div>
   </div>
@@ -359,16 +447,16 @@
       </div>
       <div class="form-row">
         <div class="form-group fg-schedule">
+          <label>Due Date &amp; Time</label>
+          <input type="datetime-local" id="itemDueDateTime" onchange="syncAlarmToDue()">
+        </div>
+        <div class="form-group fg-schedule">
           <label>Priority</label>
           <select id="itemPriority">
             <option value="Low" selected>Low</option>
             <option value="Medium">Medium</option>
             <option value="High">High</option>
           </select>
-        </div>
-        <div class="form-group fg-schedule">
-          <label>Due Date &amp; Time</label>
-          <input type="datetime-local" id="itemDueDateTime">
         </div>
         <div class="form-group fg-schedule">
           <label>Recurrence</label>
@@ -381,8 +469,21 @@
           </select>
         </div>
         <div class="form-group fg-detail">
+          <div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;margin-bottom:6px" onclick="toggleSubtaskPanel(this)">
+            <span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>
+            <label style="cursor:pointer;margin:0">Subtasks / Checklist</label>
+          </div>
+          <div class="st-panel">
+            <div id="addSubtasks" style="margin-bottom:6px"></div>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="addNewSubtask" placeholder="Add subtask..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addAddSubtask()}">
+              <button class="btn btn-outline btn-sm" onclick="addAddSubtask()">+ Add</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group fg-detail">
           <label>Description (optional)</label>
-          <input type="text" id="itemDesc" placeholder="Details, notes...">
+          <textarea id="itemDesc" class="expandable-desc" placeholder="Details, notes..." rows="1" onfocus="this.classList.add('expanded')" onblur="if(!this.value)this.classList.remove('expanded')"></textarea>
         </div>
       </div>
       <div class="form-row">
@@ -391,15 +492,23 @@
           <input type="datetime-local" id="itemAlarm">
         </div>
         <div class="form-group fg-alert" style="min-width:auto;flex:0 0 auto">
-          <label>Notify</label>
+          <label>Notify When Alarm Fires</label>
           <div style="display:flex;gap:12px;padding:10px 0">
             <label style="font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="itemNotifyEmail" checked> Email</label>
             <label style="font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="itemNotifySms"> SMS</label>
           </div>
         </div>
         <div class="form-group fg-detail">
-          <label>URL (optional)</label>
-          <input type="url" id="itemUrl" placeholder="https://...">
+          <label>URLs (optional)</label>
+          <div id="addUrls" style="max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+          <div style="display:flex;gap:8px">
+            <input type="url" id="itemUrl" placeholder="https://..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addAddUrl()}">
+            <button class="btn btn-outline btn-sm" onclick="addAddUrl()">+ URL</button>
+          </div>
+        </div>
+        <div class="form-group fg-detail">
+          <label>Phone (optional)</label>
+          <input type="tel" id="itemPhone" placeholder="e.g. +1 555-123-4567">
         </div>
       </div>
       <div class="form-row">
@@ -453,7 +562,12 @@
   <!-- Properties -->
   <div class="panel" id="panel-properties">
     <div class="card">
-      <h2>Add Property</h2>
+      <h2>All Properties</h2>
+      <div id="propertiesTable"></div>
+    </div>
+
+    <div class="card">
+      <h2>Add New Property</h2>
       <div class="form-row">
         <div class="form-group">
           <label>Property Name</label>
@@ -465,32 +579,27 @@
         </div>
         <div class="form-group" style="flex:0 0 auto;justify-content:flex-end">
           <label>&nbsp;</label>
-          <button class="btn btn-primary" onclick="addProperty()">Add Property</button>
+          <button class="btn btn-primary" onclick="addProperty()">Add New Property</button>
         </div>
       </div>
-    </div>
-
-    <div class="card">
-      <h2>All Properties</h2>
-      <div id="propertiesTable"></div>
     </div>
   </div>
 
   <!-- Categories -->
   <div class="panel" id="panel-categories">
     <div class="card">
-      <h2>Add Category</h2>
+      <h2>All Categories</h2>
+      <div id="categoriesTable"></div>
+    </div>
+    <div class="card">
+      <h2>Add New Category</h2>
       <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
         <div style="flex:1;min-width:200px">
           <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Category Name</label>
           <input type="text" id="newCategoryName" placeholder="e.g. Landscaping" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px">
         </div>
-        <button class="btn btn-primary" onclick="addCategory()" style="height:42px">Add Category</button>
+        <button class="btn btn-primary" onclick="addCategory()" style="height:42px">Add New Category</button>
       </div>
-    </div>
-    <div class="card">
-      <h2>All Categories</h2>
-      <div id="categoriesTable"></div>
     </div>
   </div>
 
@@ -577,6 +686,23 @@
       <label>Task Name</label>
       <input type="text" id="editName">
     </div>
+    <div class="form-group fg-detail" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;margin-bottom:6px" onclick="toggleSubtaskPanel(this)">
+        <span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>
+        <label style="cursor:pointer;margin:0">Subtasks / Checklist</label>
+      </div>
+      <div class="st-panel">
+        <div id="editSubtasks"></div>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input type="text" id="editNewSubtask" placeholder="Add subtask..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addEditSubtask()}">
+          <button class="btn btn-outline btn-sm" onclick="addEditSubtask()">+ Add</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group fg-detail" style="margin-bottom:12px">
+      <label>Description</label>
+      <textarea id="editDesc" class="expandable-desc expanded" rows="3"></textarea>
+    </div>
     <div class="form-group fg-core" style="margin-bottom:12px">
       <label>Status</label>
       <select id="editStatus">
@@ -598,6 +724,10 @@
       <label>Category</label>
       <select id="editCategory"></select>
     </div>
+    <div class="form-group fg-core" style="margin-bottom:12px">
+      <label>Property</label>
+      <select id="editProperty"></select>
+    </div>
     <div class="form-group fg-schedule" style="margin-bottom:12px">
       <label>Due Date &amp; Time</label>
       <input type="datetime-local" id="editDueDateTime">
@@ -612,10 +742,6 @@
         <option value="yearly">Yearly</option>
       </select>
     </div>
-    <div class="form-group fg-detail" style="margin-bottom:12px">
-      <label>Description</label>
-      <input type="text" id="editDesc">
-    </div>
     <div class="form-group fg-alert" style="margin-bottom:12px">
       <label>Alarm</label>
       <input type="datetime-local" id="editAlarm">
@@ -629,21 +755,16 @@
       </div>
     </div>
     <div class="form-group fg-detail" style="margin-bottom:12px">
-      <label>URL</label>
-      <input type="url" id="editUrl" placeholder="https://...">
+      <label>URLs</label>
+      <div id="editUrls" style="max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+      <div style="display:flex;gap:8px">
+        <input type="url" id="editUrl" placeholder="https://..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addEditUrl()}">
+        <button class="btn btn-outline btn-sm" onclick="addEditUrl()">+ URL</button>
+      </div>
     </div>
     <div class="form-group fg-detail" style="margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;margin-bottom:6px" onclick="toggleSubtaskPanel(this)">
-        <span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>
-        <label style="cursor:pointer;margin:0">Subtasks / Checklist</label>
-      </div>
-      <div class="st-panel">
-        <div id="editSubtasks"></div>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <input type="text" id="editNewSubtask" placeholder="Add subtask..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addEditSubtask()}">
-          <button class="btn btn-outline btn-sm" onclick="addEditSubtask()">+ Add</button>
-        </div>
-      </div>
+      <label>Phone</label>
+      <input type="tel" id="editPhone" placeholder="e.g. +1 555-123-4567">
     </div>
     <div class="form-group" style="margin-bottom:12px">
       <label>Notes / Comments</label>
@@ -696,9 +817,11 @@ function loadData() {
 }
 
 let syncKey = localStorage.getItem(STORAGE_KEY + '_syncKey') || '';
-let syncWorkerUrl = localStorage.getItem(STORAGE_KEY + '_syncUrl') || '';
+// Always use same origin for sync API — no manual URL needed
+let syncWorkerUrl = window.location.origin;
 let syncEnabled = false;
 let syncing = false;
+let syncingStartedAt = 0; // timestamp to detect stuck syncs
 let smsPhone = '3156913000@vtext.com';
 
 // Initialize SMS status display
@@ -709,11 +832,28 @@ let smsPhone = '3156913000@vtext.com';
   }
 })();
 
+var _pushTimer = null;
 function save() {
+  // Stamp modification time on all items for merge conflict resolution
+  var now = Date.now();
+  (data.items || []).forEach(function(item) { item._lastModified = now; });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   if (syncEnabled && syncKey) {
-    pushToCloud();
+    if (_pushTimer) clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(function() {
+      _pushTimer = null;
+      pushToCloud();
+    }, 300);
   }
+}
+
+var _renderTimer = null;
+function renderAllDebounced() {
+  if (_renderTimer) clearTimeout(_renderTimer);
+  _renderTimer = setTimeout(function() {
+    _renderTimer = null;
+    renderAll();
+  }, 50);
 }
 
 // --- Sync ---
@@ -727,45 +867,146 @@ function toggleSync() {
   if (syncEnabled) {
     syncEnabled = false;
     syncKey = '';
-    syncWorkerUrl = '';
     localStorage.removeItem(STORAGE_KEY + '_syncKey');
-    localStorage.removeItem(STORAGE_KEY + '_syncUrl');
     document.getElementById('syncKey').disabled = false;
     document.getElementById('syncKey').value = '';
-    document.getElementById('syncWorkerUrl').disabled = false;
-    document.getElementById('syncWorkerUrl').value = '';
     document.getElementById('syncToggleBtn').textContent = 'Connect';
     document.getElementById('syncToggleBtn').className = 'btn btn-primary';
     document.getElementById('syncPullBtn').style.display = 'none';
     document.getElementById('syncPushBtn').style.display = 'none';
+    document.getElementById('syncForcePushBtn').style.display = 'none';
+    document.getElementById('syncForcePullBtn').style.display = 'none';
     setSyncStatus('disconnected', 'Not connected');
+    stopAutoSync();
     return;
   }
 
-  const url = document.getElementById('syncWorkerUrl').value.trim().replace(/\/+$/, '');
-  if (!url) return alert('Please enter your Worker URL.');
   const key = document.getElementById('syncKey').value.trim();
   if (key.length < 4) return alert('Sync key must be at least 4 characters.');
-  syncWorkerUrl = url;
+  syncWorkerUrl = window.location.origin;
   syncKey = key;
-  localStorage.setItem(STORAGE_KEY + '_syncUrl', syncWorkerUrl);
   localStorage.setItem(STORAGE_KEY + '_syncKey', syncKey);
   syncEnabled = true;
   document.getElementById('syncKey').disabled = true;
-  document.getElementById('syncWorkerUrl').disabled = true;
   document.getElementById('syncToggleBtn').textContent = 'Disconnect';
   document.getElementById('syncToggleBtn').className = 'btn btn-danger';
   document.getElementById('syncPullBtn').style.display = '';
   document.getElementById('syncPushBtn').style.display = '';
+  document.getElementById('syncForcePushBtn').style.display = '';
+  document.getElementById('syncForcePullBtn').style.display = '';
   pullFromCloud();
+  startAutoSync();
+}
+
+// Reset stuck syncing flag (iOS kills fetches on background/resume)
+function unstickSync() {
+  if (syncing && syncingStartedAt && (Date.now() - syncingStartedAt > 15000)) {
+    console.warn('[sync] Resetting stuck sync flag after 15s');
+    syncing = false;
+    syncingStartedAt = 0;
+  }
+}
+
+// Fetch with timeout (iOS Safari can hang indefinitely on resume)
+// Also adds cache-busting param to GET requests so old service workers can't serve stale data
+function fetchWithTimeout(url, opts, ms) {
+  ms = ms || 12000;
+  var controller = new AbortController();
+  var timer = setTimeout(function() { controller.abort(); }, ms);
+  opts = opts || {};
+  opts.signal = controller.signal;
+  // Cache-bust GET requests (sync pulls) to defeat any SW caching
+  if (!opts.method || opts.method === 'GET') {
+    url += (url.indexOf('?') === -1 ? '?' : '&') + '_t=' + Date.now();
+  }
+  return fetch(url, opts).finally(function() { clearTimeout(timer); });
+}
+
+// Merge two datasets: union items/properties/movements, prefer newer fields
+function mergeData(local, cloud) {
+  if (!cloud || !cloud.items) return JSON.parse(JSON.stringify(local));
+  var localMap = {};
+  (local.items || []).forEach(function(it) { localMap[it.id] = it; });
+
+  var mergedItems = [];
+  var seen = {};
+
+  // Process all cloud items, merging with local where both exist
+  (cloud.items || []).forEach(function(cItem) {
+    var lItem = localMap[cItem.id];
+    if (lItem) {
+      // Both exist — prefer whichever was modified more recently, fall back to local
+      var lTime = lItem._lastModified || 0;
+      var cTime = cItem._lastModified || 0;
+      var base = lTime >= cTime ? JSON.parse(JSON.stringify(lItem)) : JSON.parse(JSON.stringify(cItem));
+      var other = lTime >= cTime ? cItem : lItem;
+      // Always union subtasks, notes, photos (keep the longer list)
+      if ((other.subtasks || []).length > (base.subtasks || []).length) {
+        base.subtasks = JSON.parse(JSON.stringify(other.subtasks));
+      }
+      if ((other.notes || []).length > (base.notes || []).length) {
+        base.notes = JSON.parse(JSON.stringify(other.notes));
+      }
+      if ((other.photos || []).length > (base.photos || []).length) {
+        base.photos = JSON.parse(JSON.stringify(other.photos));
+      }
+      mergedItems.push(base);
+    } else {
+      mergedItems.push(JSON.parse(JSON.stringify(cItem)));
+    }
+    seen[cItem.id] = true;
+  });
+  // Add local-only items
+  (local.items || []).forEach(function(lItem) {
+    if (!seen[lItem.id]) mergedItems.push(JSON.parse(JSON.stringify(lItem)));
+  });
+
+  // Merge properties — union by id
+  var mergedProps = (cloud.properties || []).slice();
+  var propIds = {};
+  mergedProps.forEach(function(p) { propIds[p.id] = true; });
+  (local.properties || []).forEach(function(p) { if (!propIds[p.id]) mergedProps.push(p); });
+
+  // Merge movements — union by id
+  var mergedMovements = (cloud.movements || []).slice();
+  var movIds = {};
+  mergedMovements.forEach(function(m) { movIds[m.id] = true; });
+  (local.movements || []).forEach(function(m) { if (!movIds[m.id]) mergedMovements.push(m); });
+
+  var merged = JSON.parse(JSON.stringify(local));
+  merged.items = mergedItems;
+  merged.properties = mergedProps;
+  merged.movements = mergedMovements;
+  if (!merged.categories) merged.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
+  if (!merged.templates) merged.templates = local.templates || cloud.templates || [];
+  return merged;
 }
 
 async function pushToCloud() {
+  unstickSync();
   if (!syncKey || syncing) return;
   syncing = true;
-  setSyncStatus('syncing', 'Pushing...');
+  syncingStartedAt = Date.now();
+  setSyncStatus('syncing', 'Syncing...');
   try {
-    const resp = await fetch(syncWorkerUrl + '/sync', {
+    // Pull-merge-push: read cloud first, merge with local, then write back
+    var cloud = null;
+    try {
+      var pullResp = await fetchWithTimeout(syncWorkerUrl + '/sync?key=' + encodeURIComponent(syncKey));
+      if (pullResp.ok) {
+        var pullResult = JSON.parse(await pullResp.text());
+        cloud = pullResult.data;
+      }
+    } catch(e) { /* If pull fails, just push local data */ }
+
+    // Merge cloud into local if cloud has data
+    if (cloud && cloud.items) {
+      data = mergeData(data, cloud);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // Now push the merged result
+    const resp = await fetchWithTimeout(syncWorkerUrl + '/sync', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key: syncKey, data }),
@@ -777,48 +1018,36 @@ async function pushToCloud() {
     if (!resp.ok) throw new Error(result.error || 'Push failed (status ' + resp.status + ')');
     setSyncStatus('connected', 'Synced ' + new Date().toLocaleTimeString());
     localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
-    // Clear offline queue on success
     localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
+    renderAll(true);
   } catch (err) {
-    // Queue for later
+    var msg = err.name === 'AbortError' ? 'Timeout' : err.message;
     var queue = JSON.parse(localStorage.getItem(STORAGE_KEY + '_offlineQueue') || '[]');
     queue.push({ timestamp: new Date().toISOString(), data: JSON.parse(JSON.stringify(data)) });
-    if (queue.length > 5) queue = queue.slice(-5); // Keep last 5
+    if (queue.length > 5) queue = queue.slice(-5);
     localStorage.setItem(STORAGE_KEY + '_offlineQueue', JSON.stringify(queue));
-    var pending = queue.length;
-    setSyncStatus('disconnected', 'Push failed (' + pending + ' pending): ' + err.message);
+    setSyncStatus('disconnected', 'Sync failed (' + queue.length + ' pending): ' + msg);
   }
   syncing = false;
+  syncingStartedAt = 0;
 }
 
 async function pullFromCloud() {
+  unstickSync();
   if (!syncKey || syncing) return;
   syncing = true;
+  syncingStartedAt = Date.now();
   setSyncStatus('syncing', 'Pulling...');
   try {
-    const resp = await fetch(syncWorkerUrl + '/sync?key=' + encodeURIComponent(syncKey));
+    const resp = await fetchWithTimeout(syncWorkerUrl + '/sync?key=' + encodeURIComponent(syncKey));
     const text = await resp.text();
     if (!text) throw new Error('Empty response - check Worker URL and KV binding');
     var result;
     try { result = JSON.parse(text); } catch(e) { throw new Error('Invalid response: ' + text.substring(0, 100)); }
     if (!resp.ok) throw new Error(result.error || 'Pull failed (status ' + resp.status + ')');
     if (result.data) {
-      // Conflict check: if local data differs from cloud
-      var lastSync = localStorage.getItem(STORAGE_KEY + '_lastSync');
-      var localCount = data.items.length;
-      var cloudCount = result.data.items ? result.data.items.length : 0;
-      if (lastSync && localCount > 0 && cloudCount > 0 && localCount !== cloudCount) {
-        var choice = confirm('Conflict detected!\n\nLocal: ' + localCount + ' tasks\nCloud: ' + cloudCount + ' tasks\nLast synced: ' + new Date(lastSync).toLocaleString() + '\n\nClick OK to use cloud data, Cancel to keep local (then Push to overwrite cloud).');
-        if (!choice) {
-          syncing = false;
-          setSyncStatus('connected', 'Kept local data');
-          return;
-        }
-      }
-      data = result.data;
-      if (!data.categories) data.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
-      if (!data.templates) data.templates = [];
-      // Ensure all tasks have status/priority/dueDate fields
+      data = mergeData(data, result.data);
+      // Ensure all tasks have required fields
       data.items.forEach(function(item) {
         if (!item.status) item.status = 'To Do';
         if (!item.priority) item.priority = 'Medium';
@@ -839,7 +1068,7 @@ async function pullFromCloud() {
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
-      renderAll();
+      renderAll(true);
       setSyncStatus('connected', 'Synced ' + new Date().toLocaleTimeString());
     } else {
       syncing = false;
@@ -847,23 +1076,168 @@ async function pullFromCloud() {
       return;
     }
   } catch (err) {
-    setSyncStatus('disconnected', 'Pull failed: ' + err.message);
+    var msg = err.name === 'AbortError' ? 'Timeout' : err.message;
+    setSyncStatus('disconnected', 'Pull failed: ' + msg);
   }
   syncing = false;
+  syncingStartedAt = 0;
+}
+
+// Force Push: overwrite cloud with local data (no merge)
+async function forcePush() {
+  if (!syncKey) return alert('Enter a sync key first.');
+  if (!confirm('This will OVERWRITE the cloud with this device\'s ' + data.items.length + ' items. Other devices will get this data on next pull. Continue?')) return;
+  unstickSync();
+  syncing = true;
+  syncingStartedAt = Date.now();
+  setSyncStatus('syncing', 'Force pushing ' + data.items.length + ' items...');
+  try {
+    var resp = await fetchWithTimeout(syncWorkerUrl + '/sync', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: syncKey, data: data }),
+    });
+    var text = await resp.text();
+    var result = JSON.parse(text);
+    if (!resp.ok) throw new Error(result.error || 'Failed');
+    setSyncStatus('connected', 'Force pushed ' + data.items.length + ' items at ' + new Date().toLocaleTimeString());
+    localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
+    localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
+  } catch (err) {
+    setSyncStatus('disconnected', 'Force push failed: ' + (err.name === 'AbortError' ? 'Timeout' : err.message));
+  }
+  syncing = false;
+  syncingStartedAt = 0;
+}
+
+// Force Pull: overwrite local with cloud data (no merge)
+async function forcePull() {
+  if (!syncKey) return alert('Enter a sync key first.');
+  unstickSync();
+  syncing = true;
+  syncingStartedAt = Date.now();
+  setSyncStatus('syncing', 'Force pulling...');
+  try {
+    var resp = await fetchWithTimeout(syncWorkerUrl + '/sync?key=' + encodeURIComponent(syncKey));
+    var text = await resp.text();
+    var result = JSON.parse(text);
+    if (!resp.ok) throw new Error(result.error || 'Failed');
+    if (!result.data || !result.data.items) throw new Error('Cloud is empty — nothing to pull. Use Force Push from the device with the most data first.');
+    data = result.data;
+    // Ensure all fields
+    if (!data.properties) data.properties = [];
+    if (!data.movements) data.movements = [];
+    if (!data.categories) data.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
+    if (!data.templates) data.templates = [];
+    data.items.forEach(function(item) {
+      if (!item.status) item.status = 'To Do';
+      if (!item.priority) item.priority = 'Medium';
+      if (!item.dueDate) item.dueDate = '';
+      if (!item.dueTime) item.dueTime = '';
+      if (!item.url) item.url = '';
+      if (!item.photos) item.photos = [];
+      if (item.alarm === undefined) item.alarm = '';
+      if (item.alarmFired === undefined) item.alarmFired = false;
+      if (!item.recurrence) item.recurrence = 'none';
+      if (!item.subtasks) item.subtasks = [];
+      if (!item.notes) item.notes = [];
+      if (item.escalated === undefined) item.escalated = false;
+      if (item.escalationReminded === undefined) item.escalationReminded = false;
+      if (!item.assignee) item.assignee = '';
+      if (item.estimatedCost === undefined) item.estimatedCost = 0;
+      if (item.actualCost === undefined) item.actualCost = 0;
+    });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
+    renderAll(true);
+    setSyncStatus('connected', 'Force pulled ' + data.items.length + ' items at ' + new Date().toLocaleTimeString());
+    if (!confirm('Pulled ' + data.items.length + ' items from cloud. All good?')) {
+      // User said no — don't do anything else, they can see the data
+    }
+  } catch (err) {
+    setSyncStatus('disconnected', 'Force pull failed: ' + (err.name === 'AbortError' ? 'Timeout' : err.message));
+  }
+  syncing = false;
+  syncingStartedAt = 0;
+}
+
+var _autoPullTimer = null;
+
+function startAutoSync() {
+  stopAutoSync();
+  _autoPullTimer = setInterval(function() {
+    if (syncEnabled && syncKey && !syncing) pullFromCloud();
+  }, 30000);
+}
+
+function stopAutoSync() {
+  if (_autoPullTimer) { clearInterval(_autoPullTimer); _autoPullTimer = null; }
+}
+
+// Pull when app/tab regains focus (critical for iOS app switching)
+// iOS needs a brief delay after resume before network is ready
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && syncEnabled && syncKey) {
+    unstickSync();
+    setTimeout(function() {
+      if (syncEnabled && syncKey && !syncing) pullFromCloud();
+    }, 500);
+  }
+});
+
+// Also handle iOS WebView/PWA resume via pageshow
+window.addEventListener('pageshow', function(e) {
+  if (syncEnabled && syncKey) {
+    unstickSync();
+    setTimeout(function() {
+      if (syncEnabled && syncKey && !syncing) pullFromCloud();
+    }, 500);
+    // Restart auto-sync timer (iOS kills setInterval on background)
+    startAutoSync();
+  }
+});
+
+// focus event — some iOS scenarios fire focus but not visibilitychange
+window.addEventListener('focus', function() {
+  if (syncEnabled && syncKey) {
+    unstickSync();
+    setTimeout(function() {
+      if (syncEnabled && syncKey && !syncing) pullFromCloud();
+    }, 600);
+    startAutoSync();
+  }
+});
+
+// Replay any queued offline pushes
+function replayOfflineQueue() {
+  var queueStr = localStorage.getItem(STORAGE_KEY + '_offlineQueue');
+  if (!queueStr) return;
+  var queue = JSON.parse(queueStr);
+  if (queue.length === 0) return;
+  // Use the latest queued data
+  var latest = queue[queue.length - 1];
+  data = latest.data;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
+  pushToCloud();
 }
 
 function initSync() {
-  if (syncKey && syncWorkerUrl) {
+  syncWorkerUrl = window.location.origin;
+  if (syncKey) {
     document.getElementById('syncKey').value = syncKey;
     document.getElementById('syncKey').disabled = true;
-    document.getElementById('syncWorkerUrl').value = syncWorkerUrl;
-    document.getElementById('syncWorkerUrl').disabled = true;
     syncEnabled = true;
     document.getElementById('syncToggleBtn').textContent = 'Disconnect';
     document.getElementById('syncToggleBtn').className = 'btn btn-danger';
     document.getElementById('syncPullBtn').style.display = '';
     document.getElementById('syncPushBtn').style.display = '';
+    document.getElementById('syncForcePushBtn').style.display = '';
+    document.getElementById('syncForcePullBtn').style.display = '';
     pullFromCloud();
+    startAutoSync();
+    // Replay any offline pushes that were queued while disconnected
+    setTimeout(replayOfflineQueue, 3000);
   }
 }
 
@@ -922,10 +1296,131 @@ function esc(s) {
   return d.innerHTML;
 }
 
-function renderUrl(url) {
-  if (!url) return '';
-  var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
-  return '<span class="task-url"><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(display) + '</a></span>';
+function getItemUrls(item) {
+  if (item.urls && item.urls.length > 0) return item.urls;
+  if (item.url) return [item.url];
+  return [];
+}
+
+function renderUrl(urlOrUrls) {
+  var urls = Array.isArray(urlOrUrls) ? urlOrUrls : (urlOrUrls ? [urlOrUrls] : []);
+  if (urls.length === 0) return '';
+  return urls.map(function(url) {
+    var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
+    return '<span class="task-url"><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(display) + '</a></span>';
+  }).join('<br>');
+}
+
+function renderInlineUrlSection(item) {
+  var iid = item.id;
+  var urls = getItemUrls(item);
+  var urlRows = urls.map(function(url, idx) {
+    var display = url.length > 50 ? url.substring(0, 50) + '...' : url;
+    return '<div style="display:flex;align-items:center;gap:6px;padding:1px 0;font-size:12px">'
+      + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a73e8">' + esc(display) + '</a>'
+      + '<button onclick="event.preventDefault();inlineRemoveUrl(\'' + iid + '\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:11px;padding:0 3px;line-height:1" title="Remove URL">&times;</button>'
+      + '</div>';
+  }).join('');
+  var addRow = '<div style="display:flex;align-items:center;gap:6px;padding:1px 0">'
+    + '<span style="font-size:12px;color:#1a73e8;flex-shrink:0">+</span>'
+    + '<input type="text" placeholder="Add URL..." style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);outline:none;min-width:0" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddUrl(\'' + iid + '\',this)}">'
+    + '</div>';
+  var hasUrls = urls.length > 0;
+  var headerLabel = hasUrls ? urls.length + ' link' + (urls.length > 1 ? 's' : '') : 'links';
+  var panelDisplay = hasUrls ? '' : 'display:none';
+  return '<div style="margin-top:4px;padding-left:4px">'
+    + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="toggleSubtaskPanel(this)">'
+    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;' + (hasUrls ? 'transform:rotate(90deg)' : '') + '">&#9654;</span>'
+    + '<span style="font-size:11px;color:#888">' + headerLabel + '</span>'
+    + '</div>'
+    + '<div class="st-panel" style="margin-top:2px;' + panelDisplay + '">' + urlRows + addRow + '</div>'
+    + '</div>';
+}
+
+function inlineAddUrl(itemId, inputEl) {
+  var url = inputEl.value.trim();
+  if (!url) return;
+  var item = data.items.find(function(i) { return i.id === itemId; });
+  if (!item) return;
+  if (!item.urls) item.urls = getItemUrls(item).slice();
+  item.urls.push(url);
+  save();
+  renderItems();
+  renderDashboard();
+}
+
+function inlineRemoveUrl(itemId, idx) {
+  var item = data.items.find(function(i) { return i.id === itemId; });
+  if (!item) return;
+  if (!item.urls) item.urls = getItemUrls(item).slice();
+  item.urls.splice(idx, 1);
+  save();
+  renderItems();
+  renderDashboard();
+}
+
+// --- Add Form URLs ---
+var pendingAddUrls = [];
+
+function renderAddUrls() {
+  var el = document.getElementById('addUrls');
+  if (pendingAddUrls.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = pendingAddUrls.map(function(url, idx) {
+    var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px">'
+      + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(display) + '</a>'
+      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px" onclick="removeAddUrl(' + idx + ')">x</button>'
+      + '</div>';
+  }).join('');
+}
+
+function addAddUrl() {
+  var inp = document.getElementById('itemUrl');
+  var url = inp.value.trim();
+  if (!url) return;
+  pendingAddUrls.push(url);
+  inp.value = '';
+  renderAddUrls();
+}
+
+function removeAddUrl(idx) {
+  pendingAddUrls.splice(idx, 1);
+  renderAddUrls();
+}
+
+// --- Edit Modal URLs ---
+var pendingEditUrls = [];
+
+function renderEditUrls() {
+  var el = document.getElementById('editUrls');
+  if (pendingEditUrls.length === 0) {
+    el.innerHTML = '';
+    return;
+  }
+  el.innerHTML = pendingEditUrls.map(function(url, idx) {
+    var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
+    return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px">'
+      + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(display) + '</a>'
+      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px" onclick="removeEditUrl(' + idx + ')">x</button>'
+      + '</div>';
+  }).join('');
+}
+
+function addEditUrl() {
+  var inp = document.getElementById('editUrl');
+  var url = inp.value.trim();
+  if (!url) return;
+  pendingEditUrls.push(url);
+  inp.value = '';
+  renderEditUrls();
+}
+
+function removeEditUrl(idx) {
+  pendingEditUrls.splice(idx, 1);
+  renderEditUrls();
 }
 
 function renderPhotos(photos) {
@@ -966,7 +1461,8 @@ function downloadCalendarEvent(itemId) {
 
   var desc = 'Property: ' + propName;
   if (item.description) desc += '\\n' + item.description;
-  if (item.url) desc += '\\n' + item.url;
+  var itemUrlList = getItemUrls(item);
+  if (itemUrlList.length > 0) desc += '\\n' + itemUrlList.join('\\n');
 
   var ics = [
     'BEGIN:VCALENDAR',
@@ -1092,13 +1588,14 @@ function compressImage(file, maxSize, callback) {
 }
 
 // --- Subtasks ---
+var pendingAddSubtasks = [];
 var pendingEditSubtasks = [];
 
-// Drag-and-drop helpers
 var _stDrag = { source: null, list: null, callback: null };
-function stDragStart(e, list, idx, cb) { _stDrag.source = idx; _stDrag.list = list; _stDrag.callback = cb; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); e.currentTarget.style.opacity = '0.4'; }
-function stDragEnd(e) { e.currentTarget.style.opacity = '1'; }
-function stDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; e.currentTarget.style.borderTop = '2px solid #1a73e8'; }
+var _inlineDragging = false;
+function stDragStart(e, list, idx, cb) { _stDrag.source = idx; _stDrag.list = list; _stDrag.callback = cb; _inlineDragging = true; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', idx); e.currentTarget.style.opacity = '0.4'; }
+function stDragEnd(e) { e.currentTarget.style.opacity = '1'; _inlineDragging = false; }
+function stDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; var row = e.currentTarget; row.style.borderTop = '2px solid #1a73e8'; }
 function stDragLeave(e) { e.currentTarget.style.borderTop = ''; }
 function stDrop(e, targetIdx) {
   e.preventDefault(); e.currentTarget.style.borderTop = '';
@@ -1107,18 +1604,47 @@ function stDrop(e, targetIdx) {
   _stDrag.source = null; if (_stDrag.callback) _stDrag.callback();
 }
 
-// Auto-size textareas
-function autoSizeSubtask(el) { el.style.height = '0'; el.style.height = el.scrollHeight + 'px'; }
-function autoSizeAllSubtasks(container) { if (!container) return; container.querySelectorAll('textarea').forEach(function(ta) { autoSizeSubtask(ta); }); }
+function renderAddSubtasks() {
+  var el = document.getElementById('addSubtasks');
+  if (pendingAddSubtasks.length === 0) {
+    el.innerHTML = '<p style="color:#aaa;font-size:12px">No subtasks yet</p>';
+    return;
+  }
+  el.innerHTML = pendingAddSubtasks.map(function(st, idx) {
+    return '<div draggable="true" ondragstart="stDragStart(event,pendingAddSubtasks,' + idx + ',renderAddSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:13px;transition:border-top 0.1s">'
+      + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
+      + '<input type="checkbox" style="margin-top:4px" ' + (st.done ? 'checked' : '') + ' onchange="toggleAddSubtask(' + idx + ')">'
+      + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:2px 6px;font-size:13px;font-family:inherit;border-radius:4px;resize:none;overflow:hidden;min-height:0;' + (st.done ? 'text-decoration:line-through;color:#999' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameAddSubtask(' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(st.text) + '</textarea>'
+      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:2px" onclick="removeAddSubtask(' + idx + ')">x</button>'
+      + '</div>';
+  }).join('');
+  setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
+}
 
-// Expand/collapse
-function toggleSubtaskPanel(header) {
-  var arrow = header.querySelector('.st-toggle-arrow');
-  var panel = header.parentElement.querySelector('.st-panel') || header.nextElementSibling;
-  if (!panel) return;
-  var isOpen = panel.style.display !== 'none';
-  panel.style.display = isOpen ? 'none' : '';
-  arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+function addAddSubtask() {
+  var inp = document.getElementById('addNewSubtask');
+  var text = inp.value.trim();
+  if (!text) return;
+  pendingAddSubtasks.push({ id: genId(), text: text, done: false });
+  inp.value = '';
+  renderAddSubtasks();
+}
+
+function toggleAddSubtask(idx) {
+  pendingAddSubtasks[idx].done = !pendingAddSubtasks[idx].done;
+  renderAddSubtasks();
+}
+
+function renameAddSubtask(idx, val) {
+  var text = val.trim();
+  if (text) pendingAddSubtasks[idx].text = text;
+  else { pendingAddSubtasks.splice(idx, 1); }
+  renderAddSubtasks();
+}
+
+function removeAddSubtask(idx) {
+  pendingAddSubtasks.splice(idx, 1);
+  renderAddSubtasks();
 }
 
 function renderEditSubtasks() {
@@ -1128,13 +1654,14 @@ function renderEditSubtasks() {
     return;
   }
   el.innerHTML = pendingEditSubtasks.map(function(st, idx) {
-    return '<div draggable="true" ondragstart="stDragStart(event,pendingEditSubtasks,' + idx + ',renderEditSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:6px;padding:4px 0;border-bottom:1px solid var(--border);transition:border-top 0.1s">'
-      + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:1px" title="Drag to reorder">⠿</span>'
-      + '<input type="checkbox" style="width:18px;height:18px;flex-shrink:0;margin-top:1px;accent-color:#1e8e3e" ' + (st.done ? 'checked' : '') + ' onchange="toggleEditSubtask(' + idx + ')">'
-      + '<span contenteditable="true" data-idx="' + idx + '" style="flex:1;line-height:1.4;font-size:14px;padding:2px 4px;border-radius:4px;word-break:break-word;outline:none;min-height:20px;' + (st.done ? 'text-decoration:line-through;color:#aaa' : '') + '" onfocus="this.style.background=\'var(--input-bg)\';this.style.boxShadow=\'0 0 0 2px rgba(26,115,232,0.15)\'" onblur="this.style.background=\'\';this.style.boxShadow=\'\';renameEditSubtask(' + idx + ',this.textContent)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}">' + esc(st.text) + '</span>'
-      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:1px;flex-shrink:0" onclick="removeEditSubtask(' + idx + ')">x</button>'
+    return '<div draggable="true" ondragstart="stDragStart(event,pendingEditSubtasks,' + idx + ',renderEditSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;transition:border-top 0.1s">'
+      + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
+      + '<input type="checkbox" style="margin-top:4px" ' + (st.done ? 'checked' : '') + ' onchange="toggleEditSubtask(' + idx + ')">'
+      + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:2px 6px;font-size:13px;font-family:inherit;border-radius:4px;resize:none;overflow:hidden;min-height:0;' + (st.done ? 'text-decoration:line-through;color:#aaa' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameEditSubtask(' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(st.text) + '</textarea>'
+      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:2px" onclick="removeEditSubtask(' + idx + ')">x</button>'
       + '</div>';
   }).join('');
+  setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
 }
 
 function addEditSubtask() {
@@ -1163,8 +1690,62 @@ function removeEditSubtask(idx) {
   renderEditSubtasks();
 }
 
+function renderSubtaskBadge(item) {
+  var iid = item.id;
+  var hasSubs = item.subtasks && item.subtasks.length > 0;
+  var done = hasSubs ? item.subtasks.filter(function(s) { return s.done; }).length : 0;
+  var total = hasSubs ? item.subtasks.length : 0;
+  var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  var color = pct === 100 ? '#1e8e3e' : '#1a73e8';
+  var rows = '';
+  if (hasSubs) {
+    rows = item.subtasks.map(function(s, idx) {
+      return '<div draggable="true" ondragstart="stDragStart(event,_stInlineRef[\'' + iid + '\'],' + idx + ',function(){inlineSaveSubtaskOrder(\'' + iid + '\')})" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;padding:2px 0;font-size:12px;color:var(--text2);transition:border-top 0.1s">'
+        + '<span style="cursor:grab;color:#aaa;font-size:12px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
+        + '<input type="checkbox"' + (s.done ? ' checked' : '') + ' onchange="inlineToggleSubtask(\'' + iid + '\',' + idx + ')" style="width:14px;height:14px;accent-color:#1e8e3e;flex-shrink:0;margin-top:2px">'
+        + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);resize:none;overflow:hidden;min-height:0;' + (s.done ? 'text-decoration:line-through;opacity:0.5' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';inlineRenameSubtask(\'' + iid + '\',' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(s.text) + '</textarea>'
+        + '</div>';
+    }).join('');
+    if (!_inlineDragging) _stInlineRef[iid] = item.subtasks;
+  }
+  var addRow = '<div style="display:flex;align-items:center;gap:6px;padding:2px 0;margin-top:2px">'
+    + '<span style="font-size:12px;color:#1a73e8;flex-shrink:0">+</span>'
+    + '<input type="text" placeholder="Add sub-task..." style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);outline:none" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddSubtask(\'' + iid + '\',this)}">'
+    + '</div>';
+  var headerLabel = hasSubs ? done + '/' + total + ' subtasks' : 'sub-tasks';
+  var progressBar = hasSubs ? ' <div class="progress-bar" style="width:80px;height:4px"><div class="progress-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' : '';
+  var panelDisplay = hasSubs ? '' : 'display:none';
+  return '<div style="margin-top:6px;padding-left:4px">'
+    + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="toggleSubtaskPanel(this)">'
+    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;' + (hasSubs ? 'transform:rotate(90deg)' : '') + '">&#9654;</span>'
+    + '<span style="font-size:11px;color:#888">' + headerLabel + '</span>'
+    + progressBar
+    + '</div>'
+    + '<div class="st-panel" style="margin-top:4px;' + panelDisplay + '">' + rows + addRow + '</div>'
+    + '</div>';
+}
+
+function autoSizeSubtask(el) {
+  el.style.height = '0';
+  el.style.height = el.scrollHeight + 'px';
+}
+function autoSizeAllSubtasks(container) {
+  if (!container) return;
+  container.querySelectorAll('textarea').forEach(function(ta) { autoSizeSubtask(ta); });
+}
+
+function toggleSubtaskPanel(header) {
+  var arrow = header.querySelector('.st-toggle-arrow');
+  var panel = header.parentElement.querySelector('.st-panel') || header.nextElementSibling;
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+}
+
 var _stInlineRef = {};
 function inlineSaveSubtaskOrder(itemId) {
+  _inlineDragging = false;
   var item = data.items.find(function(i) { return i.id === itemId; });
   if (!item) return;
   item.subtasks = _stInlineRef[itemId];
@@ -1182,35 +1763,23 @@ function inlineRenameSubtask(itemId, idx, val) {
   renderItems();
 }
 
+function inlineAddSubtask(itemId, inputEl) {
+  var text = inputEl.value.trim();
+  if (!text) return;
+  var item = data.items.find(function(i) { return i.id === itemId; });
+  if (!item) return;
+  if (!item.subtasks) item.subtasks = [];
+  item.subtasks.push({ id: genId(), text: text, done: false });
+  save();
+  renderItems();
+}
+
 function inlineToggleSubtask(itemId, idx) {
   var item = data.items.find(function(i) { return i.id === itemId; });
   if (!item || !item.subtasks || !item.subtasks[idx]) return;
   item.subtasks[idx].done = !item.subtasks[idx].done;
   save();
   renderItems();
-}
-
-function renderSubtaskBadge(item) {
-  if (!item.subtasks || item.subtasks.length === 0) return '';
-  var done = item.subtasks.filter(function(s) { return s.done; }).length;
-  var total = item.subtasks.length;
-  var pct = Math.round((done / total) * 100);
-  var color = pct === 100 ? '#1e8e3e' : '#1a73e8';
-  var iid = item.id;
-  var rows = item.subtasks.map(function(s, idx) {
-    return '<div style="display:flex;align-items:flex-start;gap:6px;padding:3px 0;font-size:13px;color:var(--text2)">'
-      + '<input type="checkbox"' + (s.done ? ' checked' : '') + ' onchange="inlineToggleSubtask(\'' + iid + '\',' + idx + ')" style="width:16px;height:16px;accent-color:#1e8e3e;flex-shrink:0;margin-top:1px">'
-      + '<span style="flex:1;line-height:1.4;word-break:break-word;' + (s.done ? 'text-decoration:line-through;opacity:0.5' : '') + '">' + esc(s.text) + '</span>'
-      + '</div>';
-  }).join('');
-  return '<div style="margin-top:6px">'
-    + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="toggleSubtaskPanel(this)">'
-    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>'
-    + '<span style="font-size:11px;color:#888">' + done + '/' + total + ' subtasks</span>'
-    + '<div class="progress-bar" style="width:80px;height:4px"><div class="progress-fill" style="width:' + pct + '%;background:' + color + '"></div></div>'
-    + '</div>'
-    + '<div class="st-panel" style="margin-top:4px">' + rows + '</div>'
-    + '</div>';
 }
 
 // --- Notes ---
@@ -1223,10 +1792,51 @@ function renderEditNotes() {
     return;
   }
   el.innerHTML = pendingEditNotes.slice().reverse().map(function(n) {
-    return '<div style="border-left:2px solid #ddd;padding:4px 8px;margin-bottom:6px;font-size:12px">'
+    return '<div style="border-left:2px solid #ddd;padding:4px 8px;margin-bottom:6px;font-size:12px;display:flex;align-items:flex-start;gap:6px">'
+      + '<div style="flex:1">'
       + '<span style="color:#888">' + new Date(n.timestamp).toLocaleString() + '</span><br>'
-      + '<span>' + esc(n.text) + '</span></div>';
+      + '<span id="noteText_' + n.id + '">' + esc(n.text) + '</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:2px;flex-shrink:0;margin-top:2px">'
+      + '<button onclick="editNoteInline(\'' + n.id + '\')" title="Edit" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;color:#1a73e8">✏️</button>'
+      + '<button onclick="deleteEditNote(\'' + n.id + '\')" title="Delete" style="background:none;border:none;cursor:pointer;font-size:14px;padding:2px 4px;color:#d93025">🗑️</button>'
+      + '</div></div>';
   }).join('');
+}
+
+function editNoteInline(noteId) {
+  var note = pendingEditNotes.find(function(n) { return n.id === noteId; });
+  if (!note) return;
+  var span = document.getElementById('noteText_' + noteId);
+  if (!span) return;
+  var parent = span.parentElement;
+  parent.innerHTML = '<span style="color:#888">' + new Date(note.timestamp).toLocaleString() + '</span>'
+    + '<div style="display:flex;gap:4px;margin-top:4px">'
+    + '<input type="text" id="noteEdit_' + noteId + '" value="' + esc(note.text).replace(/"/g, '&quot;') + '" style="flex:1;font-size:12px;padding:4px 6px;border:1px solid #1a73e8;border-radius:4px">'
+    + '<button onclick="saveEditNote(\'' + noteId + '\')" class="btn btn-primary btn-sm" style="font-size:11px;padding:2px 8px">Save</button>'
+    + '<button onclick="renderEditNotes()" class="btn btn-outline btn-sm" style="font-size:11px;padding:2px 8px">Cancel</button>'
+    + '</div>';
+  var inp = document.getElementById('noteEdit_' + noteId);
+  if (inp) { inp.focus(); inp.selectionStart = inp.value.length; }
+}
+
+function saveEditNote(noteId) {
+  var inp = document.getElementById('noteEdit_' + noteId);
+  if (!inp) return;
+  var text = inp.value.trim();
+  if (!text) return;
+  var note = pendingEditNotes.find(function(n) { return n.id === noteId; });
+  if (note) {
+    note.text = text;
+    note.editedAt = new Date().toISOString();
+  }
+  renderEditNotes();
+}
+
+function deleteEditNote(noteId) {
+  if (!confirm('Delete this note?')) return;
+  pendingEditNotes = pendingEditNotes.filter(function(n) { return n.id !== noteId; });
+  renderEditNotes();
 }
 
 function addEditNote() {
@@ -1308,7 +1918,7 @@ function addProperty() {
   document.getElementById('propName').value = '';
   document.getElementById('propColor').value = COLORS[data.properties.length % COLORS.length];
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function deleteProperty(id) {
@@ -1317,7 +1927,7 @@ function deleteProperty(id) {
   if (!confirm('Delete this property?')) return;
   data.properties = data.properties.filter(function(p) { return p.id !== id; });
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function renameProperty(id) {
@@ -1329,7 +1939,7 @@ function renameProperty(id) {
   if (data.properties.some(function(p) { return p.name === newName && p.id !== id; })) return alert('A property with that name already exists.');
   prop.name = newName;
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function changePropertyColor(id, newColor) {
@@ -1337,7 +1947,7 @@ function changePropertyColor(id, newColor) {
   if (!prop) return;
   prop.color = newColor;
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function renderProperties() {
@@ -1371,16 +1981,24 @@ function addItem() {
   var dueDateTimeVal = document.getElementById('itemDueDateTime').value;
   var dueDate = dueDateTimeVal ? dueDateTimeVal.substring(0, 10) : '';
   var dueTime = dueDateTimeVal && dueDateTimeVal.length > 10 ? dueDateTimeVal.substring(11) : '';
-  var url = document.getElementById('itemUrl').value.trim();
+  var lastUrl = document.getElementById('itemUrl').value.trim();
+  var allUrls = pendingAddUrls.slice();
+  if (lastUrl) allUrls.push(lastUrl);
+  var phone = document.getElementById('itemPhone').value.trim();
   var alarm = document.getElementById('itemAlarm').value;
   var notifyEmail = document.getElementById('itemNotifyEmail').checked;
   var notifySms = document.getElementById('itemNotifySms').checked;
   var recurrence = document.getElementById('itemRecurrence').value;
   if (!name) return alert('Please enter a task name.');
   if (!propertyId) return alert('Please select a property. Add a property first if needed.');
-  var item = { id: genId(), name: name, category: category, propertyId: propertyId, description: description, priority: priority, status: 'To Do', dueDate: dueDate, dueTime: dueTime || '', url: url, alarm: alarm || '', alarmFired: false, notifyEmail: notifyEmail, notifySms: notifySms, recurrence: recurrence || 'none', assignee: '', estimatedCost: 0, actualCost: 0, subtasks: [], notes: [], photos: pendingAddPhotos.slice(), createdAt: today() };
+  var item = { id: genId(), name: name, category: category, propertyId: propertyId, description: description, priority: priority, status: 'To Do', dueDate: dueDate, dueTime: dueTime || '', url: allUrls.length === 1 ? allUrls[0] : '', urls: allUrls, phone: phone || '', alarm: alarm || '', alarmFired: false, notifyEmail: notifyEmail, notifySms: notifySms, recurrence: recurrence || 'none', assignee: '', estimatedCost: 0, actualCost: 0, subtasks: pendingAddSubtasks.slice(), notes: [], photos: pendingAddPhotos.slice(), createdAt: today() };
   data.items.push(item);
   data.movements.push({ id: genId(), itemId: item.id, fromId: null, toId: propertyId, date: today(), notes: 'Task created', type: 'created' });
+  // Auto-generate future recurring occurrences
+  if (recurrence && recurrence !== 'none' && dueDate) {
+    var batchCount = generateRecurringBatch(item);
+    console.log('Recurring batch generated: ' + (batchCount || 0) + ' items for recurrence=' + recurrence + ', dueDate=' + dueDate);
+  }
   document.getElementById('itemName').value = '';
   document.getElementById('itemDesc').value = '';
   document.getElementById('itemDueDateTime').value = '';
@@ -1388,10 +2006,15 @@ function addItem() {
   document.getElementById('itemRecurrence').value = 'none';
   document.getElementById('itemAlarm').value = '';
   document.getElementById('itemUrl').value = '';
+  pendingAddUrls = [];
+  renderAddUrls();
+  document.getElementById('itemPhone').value = '';
+  pendingAddSubtasks = [];
+  renderAddSubtasks();
   pendingAddPhotos = [];
   document.getElementById('addPhotoPreview').innerHTML = '';
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function deleteItem(id) {
@@ -1399,7 +2022,7 @@ function deleteItem(id) {
   data.items = data.items.filter(function(i) { return i.id !== id; });
   data.movements = data.movements.filter(function(m) { return m.itemId !== id; });
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function changeStatus(id, newStatus) {
@@ -1413,43 +2036,154 @@ function changeStatus(id, newStatus) {
     regenerateRecurringTask(item);
   }
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function regenerateRecurringTask(item) {
+  // Check if next occurrence already exists (from batch generation)
   var nextDue = calcNextDate(item.dueDate, item.recurrence);
-  var nextAlarm = '';
-  if (item.alarm && item.dueDate) {
-    // Keep same offset between alarm and due date
-    var oldDue = new Date(item.dueDate + 'T00:00:00');
-    var oldAlarm = new Date(item.alarm);
-    var offsetMs = oldAlarm.getTime() - oldDue.getTime();
-    var newDueDate = new Date(nextDue + 'T00:00:00');
-    var newAlarmDate = new Date(newDueDate.getTime() + offsetMs);
-    // Format as datetime-local string
-    nextAlarm = newAlarmDate.getFullYear() + '-' + String(newAlarmDate.getMonth()+1).padStart(2,'0') + '-' + String(newAlarmDate.getDate()).padStart(2,'0') + 'T' + String(newAlarmDate.getHours()).padStart(2,'0') + ':' + String(newAlarmDate.getMinutes()).padStart(2,'0');
+  var alreadyExists = data.items.some(function(t) {
+    return t.name === item.name && t.propertyId === item.propertyId
+      && t.recurrence === item.recurrence && t.dueDate === nextDue && t.status === 'To Do';
+  });
+  if (!alreadyExists) {
+    var nextAlarm = '';
+    if (item.alarm && item.dueDate) {
+      var oldDue = new Date(item.dueDate + 'T00:00:00');
+      var oldAlarm = new Date(item.alarm);
+      var offsetMs = oldAlarm.getTime() - oldDue.getTime();
+      var newDueDate = new Date(nextDue + 'T00:00:00');
+      var newAlarmDate = new Date(newDueDate.getTime() + offsetMs);
+      nextAlarm = newAlarmDate.getFullYear() + '-' + String(newAlarmDate.getMonth()+1).padStart(2,'0') + '-' + String(newAlarmDate.getDate()).padStart(2,'0') + 'T' + String(newAlarmDate.getHours()).padStart(2,'0') + ':' + String(newAlarmDate.getMinutes()).padStart(2,'0');
+    }
+    var newItem = {
+      id: genId(), name: item.name, category: item.category, propertyId: item.propertyId,
+      description: item.description, priority: item.priority, status: 'To Do',
+      dueDate: nextDue, dueTime: item.dueTime || '', url: item.url || '', urls: getItemUrls(item).slice(), alarm: nextAlarm, alarmFired: false,
+      notifyEmail: item.notifyEmail !== false, notifySms: item.notifySms === true,
+      recurrence: item.recurrence, subtasks: [], notes: [], photos: (item.photos || []).slice(), createdAt: today()
+    };
+    data.items.push(newItem);
+    data.movements.push({ id: genId(), itemId: newItem.id, fromId: null, toId: newItem.propertyId, date: today(), notes: 'Recurring task regenerated (' + item.recurrence + ')', type: 'created' });
   }
-  var newItem = {
-    id: genId(), name: item.name, category: item.category, propertyId: item.propertyId,
-    description: item.description, priority: item.priority, status: 'To Do',
-    dueDate: nextDue, url: item.url || '', alarm: nextAlarm, alarmFired: false,
-    notifyEmail: item.notifyEmail !== false, notifySms: item.notifySms === true,
-    recurrence: item.recurrence, photos: (item.photos || []).slice(), createdAt: today()
-  };
-  data.items.push(newItem);
-  data.movements.push({ id: genId(), itemId: newItem.id, fromId: null, toId: newItem.propertyId, date: today(), notes: 'Recurring task regenerated (' + item.recurrence + ')', type: 'created' });
+  // Also top up future batch from the latest future occurrence
+  var latestFuture = data.items.filter(function(t) {
+    return t.name === item.name && t.propertyId === item.propertyId
+      && t.recurrence === item.recurrence && t.status === 'To Do' && t.dueDate;
+  }).sort(function(a, b) { return a.dueDate > b.dueDate ? -1 : 1; })[0];
+  if (latestFuture) {
+    generateRecurringBatch(latestFuture);
+  }
 }
 
 function calcNextDate(dateStr, recurrence) {
   if (!dateStr) return today();
-  var d = new Date(dateStr + 'T00:00:00');
+  var parts = dateStr.split('-');
+  var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
   switch (recurrence) {
     case 'daily': d.setDate(d.getDate() + 1); break;
     case 'weekly': d.setDate(d.getDate() + 7); break;
     case 'monthly': d.setMonth(d.getMonth() + 1); break;
     case 'yearly': d.setFullYear(d.getFullYear() + 1); break;
   }
-  return d.toISOString().split('T')[0];
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// How many future occurrences to generate per recurrence type
+function getRecurrenceCount(recurrence) {
+  switch (recurrence) {
+    case 'daily': return 30;    // 1 month of dailies
+    case 'weekly': return 12;   // 12 weeks (~3 months)
+    case 'monthly': return 12;  // 12 months
+    case 'yearly': return 3;    // 3 years
+    default: return 0;
+  }
+}
+
+// Generate a batch of future recurring task instances from a source task
+function generateRecurringBatch(sourceItem) {
+  var rec = sourceItem.recurrence;
+  if (!rec || rec === 'none' || !sourceItem.dueDate) return 0;
+  var count = getRecurrenceCount(rec);
+  // Build set of dates that already exist for this recurring series
+  var existingDates = {};
+  for (var x = 0; x < data.items.length; x++) {
+    var t = data.items[x];
+    if (t.name === sourceItem.name && t.propertyId === sourceItem.propertyId && t.recurrence === rec && t.dueDate) {
+      existingDates[t.dueDate] = true;
+    }
+  }
+  // Generate from the source item's date forward
+  var parts = sourceItem.dueDate.split('-');
+  var curD = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  var generated = 0;
+  var newItems = [];
+  for (var n = 0; n < count; n++) {
+    // Advance the date
+    switch (rec) {
+      case 'daily': curD.setDate(curD.getDate() + 1); break;
+      case 'weekly': curD.setDate(curD.getDate() + 7); break;
+      case 'monthly': curD.setMonth(curD.getMonth() + 1); break;
+      case 'yearly': curD.setFullYear(curD.getFullYear() + 1); break;
+    }
+    var dateStr = curD.getFullYear() + '-' + String(curD.getMonth() + 1).padStart(2, '0') + '-' + String(curD.getDate()).padStart(2, '0');
+    if (existingDates[dateStr]) continue;
+    existingDates[dateStr] = true;
+    var nextAlarm = '';
+    if (sourceItem.alarm && sourceItem.dueDate) {
+      var oldDue = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+      var oldAlarm = new Date(sourceItem.alarm);
+      var offsetMs = oldAlarm.getTime() - oldDue.getTime();
+      var newAlarmDate = new Date(curD.getTime() + offsetMs);
+      nextAlarm = newAlarmDate.getFullYear() + '-' + String(newAlarmDate.getMonth()+1).padStart(2,'0') + '-' + String(newAlarmDate.getDate()).padStart(2,'0') + 'T' + String(newAlarmDate.getHours()).padStart(2,'0') + ':' + String(newAlarmDate.getMinutes()).padStart(2,'0');
+    }
+    var newItem = {
+      id: genId() + n, name: sourceItem.name, category: sourceItem.category, propertyId: sourceItem.propertyId,
+      description: sourceItem.description, priority: sourceItem.priority, status: 'To Do',
+      dueDate: dateStr, dueTime: sourceItem.dueTime || '', url: sourceItem.url || '', urls: getItemUrls(sourceItem).slice(),
+      alarm: nextAlarm, alarmFired: false,
+      notifyEmail: sourceItem.notifyEmail !== false, notifySms: sourceItem.notifySms === true,
+      recurrence: rec, subtasks: [], notes: [], photos: (sourceItem.photos || []).slice(), createdAt: today()
+    };
+    newItems.push(newItem);
+    generated++;
+  }
+  // Add all at once to avoid iteration issues
+  for (var j = 0; j < newItems.length; j++) {
+    data.items.push(newItems[j]);
+    data.movements.push({ id: genId() + 'r' + j, itemId: newItems[j].id, fromId: null, toId: newItems[j].propertyId, date: today(), notes: 'Recurring auto-generated (' + rec + ') - ' + newItems[j].dueDate, type: 'created' });
+  }
+  return generated;
+}
+
+// On startup, check all recurring tasks and fill in any missing future occurrences
+function fillMissingRecurrences() {
+  // Group recurring tasks by name+property+recurrence to find the latest due date per group
+  var groups = {};
+  data.items.forEach(function(t) {
+    if (!t.recurrence || t.recurrence === 'none' || !t.dueDate) return;
+    var key = t.name + '|||' + t.propertyId + '|||' + t.recurrence;
+    if (!groups[key] || t.dueDate > groups[key].dueDate) {
+      groups[key] = t;
+    }
+  });
+  var totalGenerated = 0;
+  Object.keys(groups).forEach(function(key) {
+    var latestItem = groups[key];
+    // Only generate if the latest occurrence is not far enough in the future
+    var count = getRecurrenceCount(latestItem.recurrence);
+    var existingFuture = data.items.filter(function(t) {
+      return t.name === latestItem.name && t.propertyId === latestItem.propertyId
+        && t.recurrence === latestItem.recurrence && t.status === 'To Do'
+        && t.dueDate && t.dueDate >= today();
+    }).length;
+    if (existingFuture < Math.ceil(count / 2)) {
+      totalGenerated += (generateRecurringBatch(latestItem) || 0);
+    }
+  });
+  if (totalGenerated > 0) {
+    save();
+  }
 }
 
 function openEditModal(itemId) {
@@ -1464,11 +2198,19 @@ function openEditModal(itemId) {
   editCatEl.innerHTML = cats.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') + '<option value="__add_new__">+ Add new category...</option>';
   editCatEl.onchange = function() { handleNewCategorySelect(editCatEl); };
   editCatEl.value = item.category;
+  // Populate property dropdown in edit modal
+  var editPropEl = document.getElementById('editProperty');
+  editPropEl.innerHTML = data.properties.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="__add_new_prop__">+ Add new property...</option>';
+  editPropEl.value = item.propertyId;
+  editPropEl.onchange = function() { handleNewPropertySelect(editPropEl); };
   var editDtVal = item.dueDate ? (item.dueDate + 'T' + (item.dueTime || '00:00')) : '';
   document.getElementById('editDueDateTime').value = editDtVal;
   document.getElementById('editRecurrence').value = item.recurrence || 'none';
   document.getElementById('editDesc').value = item.description || '';
-  document.getElementById('editUrl').value = item.url || '';
+  document.getElementById('editUrl').value = '';
+  pendingEditUrls = getItemUrls(item).slice();
+  renderEditUrls();
+  document.getElementById('editPhone').value = item.phone || '';
   document.getElementById('editAlarm').value = item.alarm || '';
   document.getElementById('editNotifyEmail').checked = item.notifyEmail !== false;
   document.getElementById('editNotifySms').checked = item.notifySms === true;
@@ -1484,6 +2226,10 @@ function openEditModal(itemId) {
 
 function closeEditModal() {
   document.getElementById('editModal').classList.remove('active');
+  pendingEditSubtasks = [];
+  pendingEditNotes = [];
+  pendingEditPhotos = [];
+  pendingEditUrls = [];
 }
 
 function saveEdit() {
@@ -1499,18 +2245,30 @@ function saveEdit() {
   var newDueDate = editDtVal ? editDtVal.substring(0, 10) : '';
   var newDueTime = editDtVal && editDtVal.length > 10 ? editDtVal.substring(11) : '';
   var newDesc = document.getElementById('editDesc').value.trim();
-  var newUrl = document.getElementById('editUrl').value.trim();
+  var lastEditUrl = document.getElementById('editUrl').value.trim();
+  var newUrls = pendingEditUrls.slice();
+  if (lastEditUrl) newUrls.push(lastEditUrl);
+  var newPhone = document.getElementById('editPhone').value.trim();
   var newAlarm = document.getElementById('editAlarm').value;
   var newNotifyEmail = document.getElementById('editNotifyEmail').checked;
   var newNotifySms = document.getElementById('editNotifySms').checked;
   var newRecurrence = document.getElementById('editRecurrence').value;
+  var newPropertyId = document.getElementById('editProperty').value;
+  var oldPropertyId = item.propertyId;
   if (newName && newName !== item.name) changes.push('Renamed');
   if (newStatus !== item.status) changes.push('Status: ' + item.status + ' -> ' + newStatus);
   if (newPriority !== item.priority) changes.push('Priority: ' + item.priority + ' -> ' + newPriority);
   if (newCategory !== item.category) changes.push('Category changed');
+  if (newPropertyId !== item.propertyId) {
+    var oldProp = getProperty(item.propertyId);
+    var newProp = getProperty(newPropertyId);
+    changes.push('Property: ' + (oldProp ? oldProp.name : '?') + ' -> ' + (newProp ? newProp.name : '?'));
+  }
   if (newDueDate !== (item.dueDate||'')) changes.push('Due date updated');
   if (newDueTime !== (item.dueTime||'')) changes.push('Due time updated');
-  if (newUrl !== (item.url||'')) changes.push('URL updated');
+  var oldUrls = getItemUrls(item);
+  if (JSON.stringify(newUrls) !== JSON.stringify(oldUrls)) changes.push('URLs updated');
+  if (newPhone !== (item.phone||'')) changes.push('Phone updated');
   if (newAlarm !== (item.alarm||'')) changes.push('Alarm updated');
   var oldPhotoCount = (item.photos||[]).length;
   if (pendingEditPhotos.length !== oldPhotoCount) changes.push('Photos updated');
@@ -1518,10 +2276,13 @@ function saveEdit() {
   item.status = newStatus;
   item.priority = newPriority;
   item.category = newCategory;
+  item.propertyId = newPropertyId;
   item.dueDate = newDueDate;
   item.dueTime = newDueTime || '';
   item.description = newDesc;
-  item.url = newUrl;
+  item.url = newUrls.length === 1 ? newUrls[0] : (newUrls.length > 0 ? newUrls[0] : '');
+  item.urls = newUrls;
+  item.phone = newPhone;
   if (newAlarm !== (item.alarm||'')) { item.alarm = newAlarm || ''; item.alarmFired = false; }
   item.notifyEmail = newNotifyEmail;
   item.notifySms = newNotifySms;
@@ -1530,11 +2291,11 @@ function saveEdit() {
   item.subtasks = pendingEditSubtasks.slice();
   item.notes = pendingEditNotes.slice();
   if (changes.length > 0) {
-    data.movements.push({ id: genId(), itemId: itemId, fromId: item.propertyId, toId: item.propertyId, date: today(), notes: changes.join('; '), type: 'edit' });
+    data.movements.push({ id: genId(), itemId: itemId, fromId: oldPropertyId, toId: newPropertyId, date: today(), notes: changes.join('; '), type: newPropertyId !== oldPropertyId ? 'move' : 'edit' });
   }
   save();
   closeEditModal();
-  renderAll();
+  renderAllDebounced();
 }
 
 function openMoveModal(itemId) {
@@ -1566,7 +2327,7 @@ function confirmModalMove() {
   item.propertyId = toId;
   save();
   closeModal();
-  renderAll();
+  renderAllDebounced();
 }
 
 function renderItems() {
@@ -1675,31 +2436,65 @@ function renderItems() {
         groupHeader = '<tr><td colspan="5" style="background:#f0f2f5;padding:10px 12px;font-weight:700;font-size:14px;border-bottom:2px solid ' + pColor + '"><span class="property-color" style="background:' + pColor + '"></span>' + esc(pName) + '</td></tr>';
       }
     }
+    var dtVal = i.dueDate ? (i.dueDate + 'T' + (i.dueTime || '00:00')) : '';
     var ds = dueStatus(i.dueDate);
     var dueCls = i.status === 'Done' ? '' : ds;
-    var timeStr = i.dueTime ? ' ' + formatTime(i.dueTime) : '';
-    var dueLabel = i.dueDate ? '<span class="task-due ' + dueCls + '">' + formatDate(i.dueDate) + timeStr + (dueCls === 'overdue' ? ' (overdue)' : dueCls === 'due-soon' ? ' (soon)' : '') + '</span>' : '<span style="color:#ccc">--</span>';
+    var dueColor = dueCls === 'overdue' ? '#d93025' : dueCls === 'due-soon' ? '#f9ab00' : '#888';
+    var dayOfWeek = i.dueDate ? new Date(i.dueDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }) : '';
+    var dueLabel = (dayOfWeek ? '<span style="font-size:12px;font-weight:600;color:' + dueColor + '">' + dayOfWeek + '</span> ' : '') + '<input type="datetime-local" class="inline-due-date" value="' + dtVal + '" data-id="' + i.id + '" onchange="inlineChangeDate(this)" style="color:' + dueColor + '">';
     var propColor = getProperty(i.propertyId) ? getProperty(i.propertyId).color : '#1a1a2e';
-    return groupHeader + '<tr>'
+    var propName = getProperty(i.propertyId) ? getProperty(i.propertyId).name : '';
+    // Desktop: table row
+    var desktopRow = '<tr class="task-desktop-row">'
       + '<td style="width:30px"><input type="checkbox" class="bulk-check" data-id="' + i.id + '" onchange="updateBulkBar()"></td>'
       + '<td><input type="text" value="' + esc(i.name).replace(/"/g, '&quot;') + '" class="inline-task-name ' + (STATUS_CLASSES[i.status]||'') + '" style="color:' + propColor + '" data-id="' + i.id + '" onchange="inlineRenameTask(this)" onkeydown="if(event.key===\'Enter\')this.blur()">'
       + (i.recurrence && i.recurrence !== 'none' ? ' <span class="badge badge-purple" style="font-size:10px">' + i.recurrence + '</span>' : '')
       + renderNoteCount(i)
-      + (i.description ? '<br><small style="color:#888">' + esc(i.description) + '</small>' : '')
       + renderSubtaskBadge(i)
+      + (i.description ? '<br><span class="task-desc-toggle" onclick="toggleDesc(this)" title="Click to expand">' + esc(i.description) + '</span>' : '')
       + renderAlarm(i)
-      + (i.url ? '<br>' + renderUrl(i.url) : '')
+      + renderInlineUrlSection(i)
+      + (i.phone ? '<br><a href="tel:' + esc(i.phone) + '" class="task-phone-link">' + esc(i.phone) + '</a>' : '')
       + renderPhotos(i.photos)
       + '</td>'
-      + '<td>' + propBadge(i.propertyId) + '</td>'
       + '<td>' + dueLabel + '</td>'
+      + '<td style="width:30px;text-align:center"><input type="checkbox" class="done-check" data-id="' + i.id + '"' + (i.status === 'Done' ? ' checked' : '') + ' onchange="inlineToggleDone(this)" title="Mark as completed"></td>'
       + '<td>'
       + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')" title="Edit">Edit</button> '
       + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled title="Need 2+ properties"' : ' title="Reassign"') + '>Move</button> '
       + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
-      + '</td></tr>';
+      + '</td>'
+      + '<td>' + buildInlinePropSelect(i) + '</td>'
+      + '</tr>';
+    // Mobile: card
+    var dueDateDisplay = i.dueDate ? (dayOfWeek + ' ' + formatDate(i.dueDate) + (i.dueTime && i.dueTime !== '00:00' ? ' ' + formatTime(i.dueTime) : '')) : 'No date';
+    var mobileCard = '<div class="task-mobile-card priority-' + (i.priority||'medium').toLowerCase() + '">'
+      + '<div class="tmc-top">'
+      + '<input type="checkbox" class="done-check" data-id="' + i.id + '"' + (i.status === 'Done' ? ' checked' : '') + ' onchange="inlineToggleDone(this)" style="width:20px;height:20px;flex-shrink:0">'
+      + '<span class="tmc-name ' + (STATUS_CLASSES[i.status]||'') + '" style="color:' + propColor + '" onclick="openEditModal(\'' + i.id + '\')">' + esc(i.name) + '</span>'
+      + '</div>'
+      + renderSubtaskBadge(i)
+      + (i.description ? '<div style="margin:4px 0;font-size:13px;color:#888;line-height:1.4;word-break:break-word">' + esc(i.description) + '</div>' : '')
+      + '<div class="tmc-due" style="color:' + dueColor + '">' + dueDateDisplay + '</div>'
+      + '<div class="tmc-meta">'
+      + '<span class="badge" style="background:' + propColor + '15;color:' + propColor + ';font-size:11px">' + esc(propName) + '</span>'
+      + (i.recurrence && i.recurrence !== 'none' ? ' <span class="badge badge-purple" style="font-size:10px">' + i.recurrence + '</span>' : '')
+      + renderNoteCount(i)
+      + '</div>'
+      + renderAlarm(i)
+      + renderInlineUrlSection(i)
+      + (i.phone ? '<a href="tel:' + esc(i.phone) + '" class="task-phone-link">' + esc(i.phone) + '</a>' : '')
+      + renderPhotos(i.photos)
+      + '<div class="tmc-actions">'
+      + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')">Edit</button>'
+      + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled' : '') + '>Move</button>'
+      + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
+      + '</div>'
+      + '</div>';
+    return groupHeader + desktopRow + mobileCard;
   }).join('');
-  el.innerHTML = '<table><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllBulk(this)"></th><th>Task</th><th>Property</th><th>Due Date</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.innerHTML = '<table class="task-desktop-table"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllBulk(this)"></th><th>Task</th><th>Due Date</th><th style="width:30px">Done</th><th>Actions</th><th>Property</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
 }
 
 // --- Bulk Actions ---
@@ -1749,7 +2544,7 @@ function bulkDelete() {
   });
   save();
   clearBulkSelection();
-  renderAll();
+  renderAllDebounced();
 }
 
 // --- Kanban Board ---
@@ -1774,7 +2569,7 @@ function renderKanban() {
         + propBadge(t.propertyId)
         + '<span class="badge ' + (PRIORITY_BADGES[t.priority]||'badge-gray') + '">' + t.priority + '</span>'
         + (t.dueDate ? '<span class="task-due ' + dueCls + '">' + formatDate(t.dueDate) + '</span>' : '')
-        + (t.url ? '<span class="task-url"><a href="' + esc(t.url) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">Link</a></span>' : '')
+        + (getItemUrls(t).length > 0 ? '<span class="task-url"><a href="' + esc(getItemUrls(t)[0]) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + getItemUrls(t).length + ' Link' + (getItemUrls(t).length > 1 ? 's' : '') + '</a></span>' : '')
         + (t.photos && t.photos.length ? '<span style="color:#888">' + t.photos.length + ' photo' + (t.photos.length>1?'s':'') + '</span>' : '')
         + '</div></div>';
     });
@@ -1798,7 +2593,7 @@ function recordMovement() {
   item.propertyId = toId;
   document.getElementById('moveNotes').value = '';
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function renderMovements() {
@@ -1884,7 +2679,7 @@ function renderDashboard() {
           + '<td>' + esc(t.name)
           + (t.description ? '<br><small style="color:#888">' + esc(t.description) + '</small>' : '')
           + renderAlarm(t)
-          + (t.url ? '<br>' + renderUrl(t.url) : '')
+          + renderInlineUrlSection(t)
           + renderPhotos(t.photos)
           + '</td>'
           + '<td>' + (t.dueDate ? '<span class="task-due ' + dueCls + '">' + formatDate(t.dueDate) + (t.dueTime ? ' ' + formatTime(t.dueTime) : '') + (dueCls==='overdue' ? ' (overdue)' : dueCls==='due-soon' ? ' (soon)' : '') + '</span>' : '<span style="color:#ccc">--</span>') + '</td></tr>';
@@ -1930,11 +2725,14 @@ function populateDropdowns() {
   itemCatEl.onchange = function() { handleNewCategorySelect(itemCatEl); };
   editCatEl.onchange = function() { handleNewCategorySelect(editCatEl); };
 
+  var propOptionsWithAdd = propOptions + '<option value="__add_new_prop__">+ Add new property...</option>';
+
   var itemPropEl = document.getElementById('itemProperty');
   var prevItemProp = itemPropEl.value;
-  itemPropEl.innerHTML = (data.properties.length ? '' : '<option value="">-- Add a property first --</option>') + propOptions;
-  if (prevItemProp) { itemPropEl.value = prevItemProp; }
+  itemPropEl.innerHTML = (data.properties.length ? '' : '<option value="">-- Add a property first --</option>') + propOptionsWithAdd;
+  if (prevItemProp && prevItemProp !== '__add_new_prop__') { itemPropEl.value = prevItemProp; }
   else { var defProp = data.properties.find(function(p) { return p.name === '42-l' || p.name === '42-L'; }); if (defProp) itemPropEl.value = defProp.id; }
+  itemPropEl.onchange = function() { handleNewPropertySelect(itemPropEl); };
   document.getElementById('filterProperty').innerHTML = '<option value="">All Properties</option>' + propOptions;
   document.getElementById('moveTo').innerHTML = propOptions;
   document.getElementById('filterMoveProperty').innerHTML = '<option value="">All Properties</option>' + propOptions;
@@ -1950,11 +2748,29 @@ function populateDropdowns() {
 }
 
 // --- Tabs ---
+var _activeTab = 'tasks';
+var _dirtyTabs = {};
+
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
   document.querySelector('.tab[onclick="switchTab(\'' + name + '\')"]').classList.add('active');
   document.getElementById('panel-' + name).classList.add('active');
+  _activeTab = name;
+  if (_dirtyTabs[name]) {
+    _dirtyTabs[name] = false;
+    _renderTab(name);
+  }
+}
+
+function _renderTab(name) {
+  switch (name) {
+    case 'dashboard': renderStats(); renderDashboard(); break;
+    case 'tasks': renderItems(); break;
+    case 'calendar': renderCalendar(); break;
+    case 'templates': renderTemplates(); break;
+    case 'movements': renderMovements(); break;
+  }
 }
 
 // --- Export / Import ---
@@ -1999,7 +2815,7 @@ function importData(event) {
         if (item.actualCost === undefined) item.actualCost = 0;
       });
       save();
-      renderAll();
+      renderAll(true);
     } catch (err) {
       alert('Invalid file format: ' + err.message);
     }
@@ -2009,17 +2825,35 @@ function importData(event) {
 }
 
 // --- Render All ---
-function renderAll() {
+function renderAll(forceAll) {
   populateDropdowns();
-  renderStats();
-  renderDashboard();
-  renderKanban();
   renderProperties();
-  renderItems();
-  renderMovements();
   renderCategories();
-  renderTemplates();
-  renderCalendar();
+
+  if (forceAll) {
+    // Full render on initial load or import
+    renderStats();
+    renderDashboard();
+    renderKanban();
+    renderItems();
+    renderMovements();
+    renderTemplates();
+    renderCalendar();
+    _dirtyTabs = {};
+  } else {
+    // Only render the active tab, mark others dirty
+    _dirtyTabs.dashboard = true;
+    _dirtyTabs.tasks = true;
+    _dirtyTabs.calendar = true;
+    _dirtyTabs.templates = true;
+    _dirtyTabs.movements = true;
+    _dirtyTabs[_activeTab] = false;
+    _renderTab(_activeTab);
+    // Kanban is part of dashboard
+    if (_activeTab === 'dashboard') renderKanban();
+    else _dirtyTabs.dashboard = true;
+  }
+
   // Populate report property dropdown
   var rp = document.getElementById('reportProperty');
   var rpVal = rp.value;
@@ -2027,6 +2861,7 @@ function renderAll() {
   if (rpVal) rp.value = rpVal;
   if (rpVal) renderReport();
   setDefaultDueDateTime();
+  renderAddSubtasks();
 }
 
 function setDefaultDueDateTime() {
@@ -2038,11 +2873,53 @@ function setDefaultDueDateTime() {
     var d = String(now.getDate()).padStart(2, '0');
     var h = String(now.getHours()).padStart(2, '0');
     var mi = String(now.getMinutes()).padStart(2, '0');
-    el.value = y + '-' + mo + '-' + d + 'T' + h + ':' + mi;
+    var defaultVal = y + '-' + mo + '-' + d + 'T' + h + ':' + mi;
+    el.value = defaultVal;
+    // Sync alarm to match the default due date/time
+    var alarmEl = document.getElementById('itemAlarm');
+    if (!alarmEl.value) {
+      alarmEl.value = defaultVal;
+    }
+  }
+}
+
+function syncAlarmToDue() {
+  var dueVal = document.getElementById('itemDueDateTime').value;
+  if (dueVal) {
+    document.getElementById('itemAlarm').value = dueVal;
   }
 }
 
 // --- Categories Management ---
+function handleNewPropertySelect(selectEl) {
+  if (selectEl.value !== '__add_new_prop__') return;
+  var name = prompt('Enter new property name:');
+  if (!name || !name.trim()) {
+    // Revert to first property
+    selectEl.value = data.properties.length ? data.properties[0].id : '';
+    return;
+  }
+  name = name.trim();
+  // Check for duplicate
+  var existing = data.properties.find(function(p) { return p.name.toLowerCase() === name.toLowerCase(); });
+  if (existing) {
+    selectEl.value = existing.id;
+    return;
+  }
+  // Prompt for color
+  var color = prompt('Enter a color for "' + name + '" (hex, e.g. #1a73e8):', '#1a73e8');
+  if (!color || !color.trim()) color = '#1a73e8';
+  var newProp = { id: genId(), name: name, color: color.trim() };
+  data.properties.push(newProp);
+  save();
+  // Rebuild options and select the new one
+  var opts = data.properties.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="__add_new_prop__">+ Add new property...</option>';
+  selectEl.innerHTML = opts;
+  selectEl.value = newProp.id;
+  populateDropdowns();
+  renderProperties();
+}
+
 function handleNewCategorySelect(selectEl) {
   if (selectEl.value !== '__add_new__') return;
   var name = prompt('Enter new category name:');
@@ -2070,7 +2947,7 @@ function addCategory() {
   data.categories.push(name);
   inp.value = '';
   save();
-  renderAll();
+  renderAllDebounced();
   alert('Category "' + name + '" added successfully!');
 }
 
@@ -2084,7 +2961,83 @@ function renameCategory(oldName) {
   data.items.forEach(function(item) {
     if (item.category === oldName) item.category = newName;
   });
-  save(); renderAll();
+  save(); renderAllDebounced();
+}
+
+function buildInlinePropSelect(item) {
+  var curProp = getProperty(item.propertyId);
+  var curColor = curProp ? curProp.color : '#999';
+  var opts = data.properties.map(function(p) {
+    return '<option value="' + p.id + '"' + (p.id === item.propertyId ? ' selected' : '') + '>' + esc(p.name) + '</option>';
+  }).join('') + '<option value="__add_new_prop__">+ Add new...</option>';
+  return '<select class="inline-prop-select" data-id="' + item.id + '" onchange="inlineChangePropertyOrAdd(this)" style="border:1px solid transparent;background:transparent;color:' + curColor + ';font-weight:600;font-size:13px;padding:2px 4px;border-radius:4px;cursor:pointer;min-width:80px">' + opts + '</select>';
+}
+
+function inlineChangePropertyOrAdd(sel) {
+  if (sel.value === '__add_new_prop__') {
+    var id = sel.getAttribute('data-id');
+    var item = getItem(id);
+    var name = prompt('Enter new property name:');
+    if (!name || !name.trim()) { sel.value = item ? item.propertyId : ''; return; }
+    name = name.trim();
+    var existing = data.properties.find(function(p) { return p.name.toLowerCase() === name.toLowerCase(); });
+    if (existing) { sel.value = existing.id; inlineChangeProperty(sel); return; }
+    var color = prompt('Enter a color for "' + name + '" (hex, e.g. #1a73e8):', '#1a73e8');
+    if (!color || !color.trim()) color = '#1a73e8';
+    var newProp = { id: genId(), name: name, color: color.trim() };
+    data.properties.push(newProp);
+    save();
+    sel.value = newProp.id;
+    // Fall through to inlineChangeProperty which will save, log, and re-render
+  }
+  inlineChangeProperty(sel);
+}
+
+function inlineChangeProperty(sel) {
+  var id = sel.getAttribute('data-id');
+  var item = getItem(id);
+  if (!item) return;
+  var newPropId = sel.value;
+  if (newPropId === item.propertyId) return;
+  var oldProp = getProperty(item.propertyId);
+  var newProp = getProperty(newPropId);
+  var oldPropId = item.propertyId;
+  item.propertyId = newPropId;
+  data.movements.push({ id: genId(), itemId: id, fromId: oldPropId, toId: newPropId, date: today(), notes: 'Property: ' + (oldProp ? oldProp.name : '?') + ' -> ' + (newProp ? newProp.name : '?'), type: 'move' });
+  save();
+  renderAllDebounced();
+}
+
+function inlineToggleDone(cb) {
+  var id = cb.getAttribute('data-id');
+  var item = getItem(id);
+  if (!item) return;
+  var oldStatus = item.status;
+  item.status = cb.checked ? 'Done' : 'To Do';
+  data.movements.push({ id: genId(), itemId: id, fromId: item.propertyId, toId: item.propertyId, date: today(), notes: 'Status: ' + oldStatus + ' -> ' + item.status, type: 'edit' });
+  save();
+  renderAllDebounced();
+}
+
+function toggleDesc(el) {
+  el.classList.toggle('expanded');
+}
+
+function inlineChangeDate(input) {
+  var id = input.getAttribute('data-id');
+  var item = getItem(id);
+  if (!item) return;
+  var val = input.value;
+  var newDate = val ? val.substring(0, 10) : '';
+  var newTime = val && val.length > 10 ? val.substring(11) : '';
+  if (newDate === (item.dueDate || '') && newTime === (item.dueTime || '')) return;
+  var oldLabel = item.dueDate ? (item.dueDate + (item.dueTime ? ' ' + item.dueTime : '')) : 'none';
+  var newLabel = newDate ? (newDate + (newTime ? ' ' + newTime : '')) : 'none';
+  item.dueDate = newDate;
+  item.dueTime = newTime;
+  data.movements.push({ id: genId(), itemId: id, fromId: item.propertyId, toId: item.propertyId, date: today(), notes: 'Due date: ' + oldLabel + ' -> ' + newLabel, type: 'edit' });
+  save();
+  renderAllDebounced();
 }
 
 function inlineRenameTask(input) {
@@ -2110,7 +3063,7 @@ function inlineRenameCategory(input) {
   data.items.forEach(function(item) {
     if (item.category === oldName) item.category = newName;
   });
-  save(); renderAll();
+  save(); renderAllDebounced();
 }
 
 function deleteCategory(name) {
@@ -2126,7 +3079,7 @@ function deleteCategory(name) {
       if (item.category === name) item.category = fallback;
     });
   }
-  save(); renderAll();
+  save(); renderAllDebounced();
 }
 
 function deleteSelectedCategory() {
@@ -2142,7 +3095,7 @@ function deleteSelectedCategory() {
     var fallback = data.categories.length > 0 ? data.categories[0] : 'Other';
     data.items.forEach(function(item) { if (item.category === cat) item.category = fallback; });
   }
-  save(); renderAll();
+  save(); renderAllDebounced();
 }
 
 function deleteSelectedProperty() {
@@ -2155,7 +3108,7 @@ function deleteSelectedProperty() {
   if (count > 0) return alert('Cannot delete "' + prop.name + '": ' + count + ' task(s) are assigned to it. Reassign them first.');
   if (!confirm('Delete property "' + prop.name + '"?')) return;
   data.properties = data.properties.filter(function(p) { return p.id !== propId; });
-  save(); renderAll();
+  save(); renderAllDebounced();
 }
 
 function moveCategoryUp(idx) {
@@ -2163,7 +3116,7 @@ function moveCategoryUp(idx) {
   var tmp = data.categories[idx - 1];
   data.categories[idx - 1] = data.categories[idx];
   data.categories[idx] = tmp;
-  save(); renderAll();
+  save(); renderAllDebounced();
 }
 
 function moveCategoryDown(idx) {
@@ -2171,7 +3124,7 @@ function moveCategoryDown(idx) {
   var tmp = data.categories[idx + 1];
   data.categories[idx + 1] = data.categories[idx];
   data.categories[idx] = tmp;
-  save(); renderAll();
+  save(); renderAllDebounced();
 }
 
 function renderCategories() {
@@ -2403,7 +3356,7 @@ function deleteTemplate(tplId) {
   if (!confirm('Delete this template?')) return;
   data.templates = (data.templates || []).filter(function(t) { return t.id !== tplId; });
   save();
-  renderAll();
+  renderAllDebounced();
 }
 
 function renderTemplates() {
@@ -2494,11 +3447,11 @@ function sendEmailNotification(item) {
     + (item.alarm ? r('Alarm', esc(new Date(item.alarm).toLocaleString())) : '')
     + (item.recurrence && item.recurrence !== 'none' ? r('Recurrence', esc(item.recurrence)) : '')
     + (item.description ? r('Details', esc(item.description)) : '')
-    + (item.url ? r('URL', '<a href="' + esc(item.url) + '">' + esc(item.url) + '</a>') : '')
+    + (getItemUrls(item).length > 0 ? r('URLs', getItemUrls(item).map(function(u) { return '<a href="' + esc(u) + '" target="_blank">' + esc(u) + '</a>'; }).join('<br>')) : '')
     + (item.assignee ? r('Assignee', esc(item.assignee)) : '')
     + (item.estimatedCost ? r('Est. Cost', '$' + item.estimatedCost) : '')
     + (item.actualCost ? r('Actual Cost', '$' + item.actualCost) : '')
-    + (item.subtasks && item.subtasks.length > 0 ? r('Subtasks', item.subtasks.map(function(s) { return (s.done ? '✅ ' : '☐ ') + esc(s.name); }).join('<br>')) : '')
+    + (item.subtasks && item.subtasks.length > 0 ? r('Sub-Tasks', '<div style="margin:0;padding:0">' + item.subtasks.map(function(s) { return '<div style="padding:2px 0;' + (s.done ? 'color:#999;text-decoration:line-through' : '') + '">' + (s.done ? '☑' : '☐') + ' ' + esc(s.text) + '</div>'; }).join('') + '<div style="margin-top:4px;font-size:11px;color:#888">' + item.subtasks.filter(function(s){return s.done}).length + ' of ' + item.subtasks.length + ' complete</div></div>') : '')
     + (item.notes && item.notes.length > 0 ? r('Notes', item.notes.map(function(n) { return esc(n.text || n); }).join('<br>')) : '')
     + r('Created', esc(item.createdAt || ''))
     + '</table>'
@@ -2578,11 +3531,14 @@ function sendSmsNotification(item) {
   var notifyUrl = syncWorkerUrl || 'https://bp.rbarvani.workers.dev';
   var prop = getProperty(item.propertyId);
   var propName = prop ? prop.name : '';
-  var message = 'TASK: ' + item.name;
+  var message = 'ALARM: ' + item.name;
   if (propName) message += ' | ' + propName;
   if (item.dueDate) message += ' | Due:' + formatDate(item.dueDate);
-  // Truncate to 160 chars for SMS gateway
-  if (message.length > 160) message = message.substring(0, 157) + '...';
+  if (item.alarm) message += ' | Alarm:' + new Date(item.alarm).toLocaleString();
+  if (item.notes) message += ' | ' + item.notes;
+  // Pad or truncate to exactly 160 chars for SMS gateway (max single SMS)
+  if (message.length > 160) { message = message.substring(0, 157) + '...'; }
+  else if (message.length < 160) { message = message + ' '.repeat(160 - message.length); }
 
   console.log('Sending TXT via email-to-text to 3156913000@vtext.com ...');
   fetch(notifyUrl + '/notify', {
@@ -2673,7 +3629,7 @@ function checkAlarms() {
   }
   if (changed) {
     save();
-    renderAll();
+    renderAllDebounced();
   }
 }
 
@@ -2722,9 +3678,13 @@ function checkOverdueEscalation() {
       }
     }
   });
-  if (changed) { save(); renderAll(); }
+  if (changed) { save(); renderAllDebounced(); }
 }
 setInterval(checkOverdueEscalation, 300000);
+
+// advanceOverdueTasks — REMOVED
+// Previously auto-moved overdue tasks to tomorrow, which silently changed due dates.
+// Overdue tasks now keep their original dates; the UI already highlights them in red.
 
 // --- Auto-Backup ---
 function autoBackup() {
@@ -2765,7 +3725,7 @@ function restoreBackup(key) {
     if (!data.categories) data.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
     if (!data.templates) data.templates = [];
     save();
-    renderAll();
+    renderAll(true);
     alert('Backup restored!');
   } catch(e) { alert('Failed to restore: ' + e.message); }
 }
@@ -2787,7 +3747,8 @@ setInterval(autoBackup, 3600000);
 
 // Init
 document.getElementById('propColor').value = COLORS[0];
-renderAll();
+fillMissingRecurrences();
+renderAll(true);
 initSync();
 setupPhotoDrop('addPhotoArea', 'addPhotoInput');
 setupPhotoDrop('editPhotoArea', 'editPhotoInput');
@@ -2795,6 +3756,27 @@ requestNotificationPermission();
 checkAlarms();
 checkOverdueEscalation();
 autoBackup();
+
+// Register service worker for offline PWA support
+if ('serviceWorker' in navigator) {
+  // Listen for SW update messages — auto-reload when new version activates
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'SW_UPDATED') {
+      console.log('New version detected, reloading...');
+      window.location.reload();
+    }
+  });
+
+  navigator.serviceWorker.register('./sw.js').then(function(reg) {
+    console.log('SW registered, scope:', reg.scope);
+    // Force update check immediately on every page load
+    reg.update();
+    // Then check every 2 minutes
+    setInterval(function() { reg.update(); }, 2 * 60 * 1000);
+  }).catch(function(err) {
+    console.log('SW registration failed:', err);
+  });
+}
 </script>
 </body>
 </html>

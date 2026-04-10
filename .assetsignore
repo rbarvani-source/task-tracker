@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+.wrangler
+TaskTracker-iOS
+wrangler.toml
+worker.js
+*.json
+!manifest.json
