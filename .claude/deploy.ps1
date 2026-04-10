@@ -10,3 +10,4 @@ $status = git status --porcelain 2>$null
 if (-not $status) { exit 0 }
 git commit -m "Update task tracker" 2>$null
 git push origin master 2>$null
+npx wrangler deploy 2>$null

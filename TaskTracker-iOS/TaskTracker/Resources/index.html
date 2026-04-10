@@ -817,8 +817,8 @@ function loadData() {
 }
 
 let syncKey = localStorage.getItem(STORAGE_KEY + '_syncKey') || '';
-// Always use same origin for sync API — no manual URL needed
-let syncWorkerUrl = window.location.origin;
+// Always use the Cloudflare Worker for sync API regardless of which origin serves the page
+let syncWorkerUrl = 'https://t.rbarvani.workers.dev';
 let syncEnabled = false;
 let syncing = false;
 let syncingStartedAt = 0; // timestamp to detect stuck syncs
@@ -883,7 +883,7 @@ function toggleSync() {
 
   const key = document.getElementById('syncKey').value.trim();
   if (key.length < 4) return alert('Sync key must be at least 4 characters.');
-  syncWorkerUrl = window.location.origin;
+  syncWorkerUrl = 'https://t.rbarvani.workers.dev';
   syncKey = key;
   localStorage.setItem(STORAGE_KEY + '_syncKey', syncKey);
   syncEnabled = true;
@@ -1223,7 +1223,7 @@ function replayOfflineQueue() {
 }
 
 function initSync() {
-  syncWorkerUrl = window.location.origin;
+  syncWorkerUrl = 'https://t.rbarvani.workers.dev';
   if (syncKey) {
     document.getElementById('syncKey').value = syncKey;
     document.getElementById('syncKey').disabled = true;

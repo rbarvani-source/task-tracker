@@ -5,7 +5,7 @@ struct TaskWebView: UIViewRepresentable {
     @Binding var isLoading: Bool
 
     // Live site URL — always load from here so the app stays in sync
-    private let liveURL = URL(string: "https://rbarvani-source.github.io/task-tracker/")!
+    private let liveURL = URL(string: "https://t.rbarvani.workers.dev/")!
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
