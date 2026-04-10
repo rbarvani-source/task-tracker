@@ -3195,7 +3195,22 @@ function inlineChangeDate(input) {
   item.dueTime = newTime;
   data.movements.push({ id: genId(), itemId: id, fromId: item.propertyId, toId: item.propertyId, date: today(), notes: 'Due date: ' + oldLabel + ' -> ' + newLabel, type: 'edit' });
   save();
-  renderAllDebounced();
+  // Update the day-of-week label and color in-place without rebuilding the whole table.
+  // This prevents the DOM from being destroyed while the user is still editing dates.
+  var ds = dueStatus(newDate);
+  var dueCls = item.status === 'Done' ? '' : ds;
+  var dueColor = dueCls === 'overdue' ? '#d93025' : dueCls === 'due-soon' ? '#f9ab00' : '#888';
+  input.style.color = dueColor;
+  var daySpan = input.previousElementSibling;
+  if (newDate) {
+    var dayOfWeek = new Date(newDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' });
+    if (daySpan && daySpan.tagName === 'SPAN') {
+      daySpan.textContent = dayOfWeek;
+      daySpan.style.color = dueColor;
+    }
+  } else if (daySpan && daySpan.tagName === 'SPAN') {
+    daySpan.textContent = '';
+  }
 }
 
 function inlineRenameTask(input) {
