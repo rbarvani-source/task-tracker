@@ -301,7 +301,7 @@ function buildEmailPayload(to, item, propName) {
     + r('Category', escHtml(propName))
     + (item.phone ? r('Phone', '<a href="tel:' + escHtml(item.phone) + '" style="color:#27ae60;text-decoration:none">' + escHtml(item.phone) + '</a>') : '')
     + (item.email ? r('Email', '<a href="mailto:' + escHtml(item.email) + '" style="color:#8e44ad;text-decoration:none">' + escHtml(item.email) + '</a>') : '')
-    + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">&#128205; ' + escHtml(item.address) + '</a>') : '')
+    + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">&#128205; ' + escHtml(item.address) + '</a>') : '')
     + (item.status ? r('Status', escHtml(item.status)) : '')
     + (dueStr ? r('Due', escHtml(dueStr)) : '')
     + (item.alarm ? r('Alarm', escHtml(new Date(item.alarm).toLocaleString())) : '')

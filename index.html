@@ -4131,7 +4131,7 @@ function sendEmailNotification(item) {
     + r('Category', esc(propName))
     + (item.phone ? r('Phone', '<a href="tel:' + esc(item.phone) + '" style="color:#27ae60;text-decoration:none">' + esc(item.phone) + '</a>') : '')
     + (item.email ? r('Email', '<a href="mailto:' + esc(item.email) + '" style="color:#8e44ad;text-decoration:none">' + esc(item.email) + '</a>') : '')
-    + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">📍 ' + esc(item.address) + '</a>') : '')
+    + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">📍 ' + esc(item.address) + '</a>') : '')
     + (item.status ? r('Status', esc(item.status)) : '')
     + (dueStr ? r('Due', esc(dueStr)) : '')
     + (item.alarm ? r('Alarm', esc(new Date(item.alarm).toLocaleString())) : '')
