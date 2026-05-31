@@ -72,9 +72,8 @@
   .expandable-desc { resize: none; overflow: hidden; min-height: 38px; transition: min-height 0.2s, padding 0.2s; }
   .expandable-desc.expanded { min-height: 120px; resize: vertical; overflow: auto; }
 
-  .task-desc-toggle { font-size: 13px; color: #888; cursor: pointer; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; max-width: 400px; transition: all 0.2s; }
-  .task-desc-toggle:hover { color: #555; }
-  .task-desc-toggle.expanded { -webkit-line-clamp: unset; overflow: visible; white-space: pre-wrap; max-width: none; color: #444; background: #f8f9fa; padding: 8px 10px; border-radius: 6px; border-left: 3px solid #1a73e8; margin-top: 4px; }
+  .task-desc-toggle { font-size: 13px; color: #444; cursor: pointer; display: block; white-space: pre-wrap; word-break: break-word; background: #f8f9fa; padding: 6px 10px; border-radius: 6px; border-left: 3px solid #1a73e8; margin-top: 4px; max-width: 600px; transition: all 0.2s; }
+  .task-desc-toggle:hover { background: #eef3fb; }
 
   .inline-due-date { border: 1px solid transparent; background: transparent; padding: 2px 4px; font-size: 13px; font-family: inherit; border-radius: 4px; transition: border-color 0.2s, background 0.2s; width: 100%; min-width: 140px; cursor: pointer; }
   .inline-due-date:hover { border-color: var(--border2); }
@@ -160,10 +159,6 @@
   .tmc-name.status-done,
   .tmc-name.status-blocked { color: #000 !important; }
 
-  .priority-high { border-left: 3px solid #d93025; }
-  .priority-medium { border-left: 3px solid #f9ab00; }
-  .priority-low { border-left: 3px solid #1e8e3e; }
-
   .task-due { font-size: 12px; color: #888; }
   .task-due.overdue { color: #d93025; font-weight: 600; }
   .task-due.due-soon { color: #f9ab00; font-weight: 500; }
@@ -185,10 +180,22 @@
   .task-phone-link { font-size: 12px; color: #27ae60; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
   .task-phone-link::before { content: '\260E'; }
   .task-phone-link:hover { text-decoration: underline; }
+  .task-email-link { font-size: 12px; color: #8e44ad; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; word-break: break-all; }
+  .task-email-link::before { content: '\2709'; }
+  .task-email-link:hover { text-decoration: underline; }
+  .task-address-link { font-size: 12px; color: #1a73e8; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; word-break: break-word; }
+  .task-address-link::before { content: '\1F4CD'; }
+  .task-address-link:hover { text-decoration: underline; }
 
-  .task-photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .task-photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; min-height: 48px; }
   .task-photos img { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid #eee; transition: transform 0.15s; }
   .task-photos img:hover { transform: scale(1.1); }
+
+  /* content-visibility lets Chromium skip layout/paint for off-screen rows
+     entirely — biggest single win at 500+ rows. contain-intrinsic-size gives
+     the browser a height estimate so the scrollbar stays accurate. */
+  .task-desktop-row { content-visibility: auto; contain-intrinsic-size: auto 80px; }
+  .task-mobile-card { content-visibility: auto; contain-intrinsic-size: auto 160px; }
 
   .photo-upload-area { border: 2px dashed #ddd; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; color: #888; font-size: 13px; transition: border-color 0.2s, background 0.2s; }
   .photo-upload-area:hover { border-color: #1a73e8; background: #f8f9ff; }
@@ -246,9 +253,6 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
       border-left: 3px solid #ccc;
     }
-    .task-mobile-card.priority-high { border-left-color: #d93025; }
-    .task-mobile-card.priority-medium { border-left-color: #f9ab00; }
-    .task-mobile-card.priority-low { border-left-color: #1e8e3e; }
     .tmc-top {
       display: flex;
       align-items: center;
@@ -286,6 +290,8 @@
     }
     .tmc-actions .btn { flex: 1; justify-content: center; }
     .task-mobile-card .task-phone-link { padding-left: 30px; display: block; margin-top: 4px; }
+    .task-mobile-card .task-email-link { padding-left: 30px; display: block; margin-top: 4px; }
+    .task-mobile-card .task-address-link { padding-left: 30px; display: block; margin-top: 4px; }
 
     /* Hide bulk bar on mobile for simplicity */
     #bulkBar { display: none !important; }
@@ -336,7 +342,7 @@
 <div class="header">
   <h1>Tasks</h1>
   <div style="position:relative;flex:1;max-width:300px;margin:0 20px">
-    <input type="text" id="globalSearch" placeholder="Search all tasks..." oninput="renderGlobalSearch()" onkeydown="if(event.key==='Escape'){this.value='';renderGlobalSearch()}" style="width:100%;padding:8px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;font-size:13px">
+    <input type="text" id="globalSearch" placeholder="Search all tasks..." oninput="debouncedGlobalSearch()" onkeydown="if(event.key==='Escape'){this.value='';renderGlobalSearch()}" style="width:100%;padding:8px 12px;border-radius:20px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;font-size:13px">
     <div id="globalSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.2);max-height:300px;overflow-y:auto;z-index:50;margin-top:4px"></div>
   </div>
   <div class="header-actions">
@@ -353,14 +359,142 @@
     <span style="font-size:13px;font-weight:600;color:#555">SYNC</span>
     <input type="text" id="syncKey" placeholder="Sync key (4+ chars)" minlength="4">
     <button class="btn btn-primary" id="syncToggleBtn" onclick="toggleSync()">Connect</button>
-    <button class="btn btn-outline" id="syncPullBtn" onclick="pullFromCloud()" style="display:none">Pull</button>
-    <button class="btn btn-outline" id="syncPushBtn" onclick="pushToCloud()" style="display:none">Push</button>
     <button class="btn btn-warning" id="syncForcePushBtn" onclick="forcePush()" style="display:none" title="Overwrite cloud with this device's data">Force Push</button>
     <button class="btn btn-warning" id="syncForcePullBtn" onclick="forcePull()" style="display:none" title="Overwrite this device with cloud data">Force Pull</button>
+    <button class="btn btn-danger" onclick="hardReset()" title="Unregister service worker, clear all caches, and reload (use if this device is stuck on old code/data)">Reset App</button>
     <button class="btn btn-outline" onclick="testEmail()" title="Send a test email to verify notifications work">Test Email</button>
     <span class="sync-status" id="syncStatus"><span class="sync-dot disconnected"></span>Not connected</span>
     <input type="hidden" id="syncWorkerUrl">
   </div>
+
+  <div class="card">
+    <h2>Add New Task</h2>
+    <div class="form-row">
+      <div class="form-group fg-core">
+        <label>Task Name</label>
+        <input type="text" id="itemName" placeholder="e.g. Replace water heater">
+      </div>
+      <div class="form-group fg-core">
+        <label>Category</label>
+        <div style="display:flex;gap:4px;align-items:center">
+          <select id="itemProperty" style="flex:1"></select>
+          <button class="btn btn-danger btn-sm fg-del-btn" onclick="deleteSelectedProperty()" title="Delete this category">&times;</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group fg-schedule">
+        <label>Due Date &amp; Time</label>
+        <input type="datetime-local" id="itemDueDateTime" onchange="syncAlarmToDue()">
+      </div>
+      <div class="form-group fg-schedule">
+        <label>Recurrence</label>
+        <select id="itemRecurrence">
+          <option value="none">None</option>
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+          <option value="monthly">Monthly</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="yearly">Yearly</option>
+        </select>
+      </div>
+      <div class="form-group fg-detail">
+        <div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;margin-bottom:6px" onclick="toggleSubtaskPanel(this)">
+          <span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>
+          <label style="cursor:pointer;margin:0">Subtasks / Checklist</label>
+        </div>
+        <div class="st-panel">
+          <div id="addSubtasks" style="margin-bottom:6px"></div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="addNewSubtask" placeholder="Add subtask..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addAddSubtask()}">
+            <button class="btn btn-outline btn-sm" onclick="addAddSubtask()">+ Add</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-group fg-detail">
+        <label>Description (optional)</label>
+        <textarea id="itemDesc" class="expandable-desc" placeholder="Details, notes..." rows="1" onfocus="this.classList.add('expanded')" onblur="if(!this.value)this.classList.remove('expanded')"></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group fg-alert">
+        <label>Alarm (optional)</label>
+        <input type="datetime-local" id="itemAlarm">
+        <button class="btn btn-outline btn-sm" style="margin-top:4px;width:fit-content" onclick="document.getElementById('itemAlarm').value=''">Clear Alarm</button>
+      </div>
+      <div class="form-group fg-alert" style="min-width:auto;flex:0 0 auto">
+        <label>Notify When Alarm Fires</label>
+        <div style="display:flex;gap:12px;padding:10px 0">
+          <label style="font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="itemNotifyEmail" checked> Email</label>
+          <label style="font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="itemNotifySms"> SMS</label>
+        </div>
+      </div>
+      <div class="form-group fg-detail">
+        <label>URLs (optional)</label>
+        <div id="addUrls" style="max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="url" id="itemUrl" placeholder="https://..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addAddUrl()}">
+          <button class="btn btn-outline btn-sm" onclick="addAddUrl()">+ URL</button>
+        </div>
+      </div>
+      <div class="form-group fg-detail">
+        <label>Phone (optional)</label>
+        <input type="tel" id="itemPhone" placeholder="e.g. +1 555-123-4567">
+      </div>
+      <div class="form-group fg-detail">
+        <label>Email (optional)</label>
+        <input type="email" id="itemEmail" placeholder="e.g. name@example.com">
+      </div>
+      <div class="form-group fg-detail">
+        <label>Address (optional)</label>
+        <input type="text" id="itemAddress" placeholder="e.g. 123 Main St, City, ST">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group fg-detail">
+        <label>Photos (optional)</label>
+        <div class="photo-upload-area" id="addPhotoArea" onclick="document.getElementById('addPhotoInput').click()">
+          Click or drag photos here (max 500KB each)
+        </div>
+        <input type="file" id="addPhotoInput" accept="image/*" multiple style="display:none" onchange="handleAddPhotos(event)">
+        <div class="photo-preview" id="addPhotoPreview"></div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:0 0 auto;justify-content:flex-end">
+        <button class="btn btn-primary" onclick="addItem()">Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>All Tasks</h2>
+    <div class="filter-bar">
+      <input type="text" id="itemSearch" placeholder="Search tasks..." oninput="debouncedRenderItems()">
+      <select id="filterProperty" onchange="renderItems()"></select>
+      <select id="sortOrder" onchange="renderItems()">
+        <option value="date-time" selected>Sort: Date &rarr; Time</option>
+        <option value="date">Sort: Due Date</option>
+        <option value="property">Sort: Category &rarr; Date</option>
+        <option value="date-property">Sort: Date &rarr; Category</option>
+      </select>
+    </div>
+    <div id="bulkBar" style="display:none;background:#e8f0fe;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <strong id="bulkCount" style="font-size:13px;color:#1a73e8">0 selected</strong>
+      <select id="bulkStatus" style="padding:6px 10px;font-size:13px">
+        <option value="">Change Status...</option>
+        <option value="To Do">To Do</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Done">Done</option>
+        <option value="Blocked">Blocked</option>
+      </select>
+      <button class="btn btn-primary btn-sm" onclick="bulkChangeStatus()">Apply</button>
+      <button class="btn btn-danger btn-sm" onclick="bulkDelete()">Delete Selected</button>
+      <button class="btn btn-outline btn-sm" onclick="clearBulkSelection()">Clear</button>
+    </div>
+    <div id="itemsTable"></div>
+  </div>
+
   <div class="sync-bar" id="smsBar" style="margin-top:2px">
     <span style="font-size:13px;font-weight:600;color:#555">TXT</span>
     <span style="font-size:12px;color:#666">via 3156913000@vtext.com (160 char max)</span>
@@ -397,7 +531,7 @@
   <!-- Reports -->
   <div class="panel" id="panel-reports">
     <div class="card">
-      <h2>Property Summary Report</h2>
+      <h2>Category Summary Report</h2>
       <div style="margin-bottom:16px;display:flex;gap:12px;align-items:center">
         <select id="reportProperty" onchange="renderReport()" style="max-width:300px"></select>
         <button class="btn btn-outline btn-sm" onclick="window.print()">Print Report</button>
@@ -418,7 +552,7 @@
   <!-- Dashboard -->
   <div class="panel" id="panel-dashboard">
     <div class="card">
-      <h2>Tasks by Property</h2>
+      <h2>Tasks by Category</h2>
       <div id="dashboardContent"></div>
     </div>
   </div>
@@ -433,156 +567,20 @@
 
   <!-- Tasks -->
   <div class="panel active" id="panel-tasks">
-    <div class="card">
-      <h2>Add New Task</h2>
-      <div class="form-row">
-        <div class="form-group fg-core">
-          <label>Task Name</label>
-          <input type="text" id="itemName" placeholder="e.g. Replace water heater">
-        </div>
-        <div class="form-group fg-core">
-          <label>Category</label>
-          <div style="display:flex;gap:4px;align-items:center">
-            <select id="itemCategory" style="flex:1"></select>
-            <button class="btn btn-danger btn-sm fg-del-btn" onclick="deleteSelectedCategory()" title="Delete this category">&times;</button>
-          </div>
-        </div>
-        <div class="form-group fg-core">
-          <label>Property</label>
-          <div style="display:flex;gap:4px;align-items:center">
-            <select id="itemProperty" style="flex:1"></select>
-            <button class="btn btn-danger btn-sm fg-del-btn" onclick="deleteSelectedProperty()" title="Delete this property">&times;</button>
-          </div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group fg-schedule">
-          <label>Due Date &amp; Time</label>
-          <input type="datetime-local" id="itemDueDateTime" onchange="syncAlarmToDue()">
-        </div>
-        <div class="form-group fg-schedule">
-          <label>Priority</label>
-          <select id="itemPriority">
-            <option value="Low" selected>Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-          </select>
-        </div>
-        <div class="form-group fg-schedule">
-          <label>Recurrence</label>
-          <select id="itemRecurrence">
-            <option value="none">None</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="quarterly">Quarterly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        </div>
-        <div class="form-group fg-detail">
-          <div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none;margin-bottom:6px" onclick="toggleSubtaskPanel(this)">
-            <span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>
-            <label style="cursor:pointer;margin:0">Subtasks / Checklist</label>
-          </div>
-          <div class="st-panel">
-            <div id="addSubtasks" style="margin-bottom:6px"></div>
-            <div style="display:flex;gap:8px">
-              <input type="text" id="addNewSubtask" placeholder="Add subtask..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addAddSubtask()}">
-              <button class="btn btn-outline btn-sm" onclick="addAddSubtask()">+ Add</button>
-            </div>
-          </div>
-        </div>
-        <div class="form-group fg-detail">
-          <label>Description (optional)</label>
-          <textarea id="itemDesc" class="expandable-desc" placeholder="Details, notes..." rows="1" onfocus="this.classList.add('expanded')" onblur="if(!this.value)this.classList.remove('expanded')"></textarea>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group fg-alert">
-          <label>Alarm (optional)</label>
-          <input type="datetime-local" id="itemAlarm">
-          <button class="btn btn-outline btn-sm" style="margin-top:4px;width:fit-content" onclick="document.getElementById('itemAlarm').value=''">Clear Alarm</button>
-        </div>
-        <div class="form-group fg-alert" style="min-width:auto;flex:0 0 auto">
-          <label>Notify When Alarm Fires</label>
-          <div style="display:flex;gap:12px;padding:10px 0">
-            <label style="font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="itemNotifyEmail" checked> Email</label>
-            <label style="font-size:13px;text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="checkbox" id="itemNotifySms"> SMS</label>
-          </div>
-        </div>
-        <div class="form-group fg-detail">
-          <label>URLs (optional)</label>
-          <div id="addUrls" style="max-height:100px;overflow-y:auto;margin-bottom:4px"></div>
-          <div style="display:flex;gap:8px">
-            <input type="url" id="itemUrl" placeholder="https://..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addAddUrl()}">
-            <button class="btn btn-outline btn-sm" onclick="addAddUrl()">+ URL</button>
-          </div>
-        </div>
-        <div class="form-group fg-detail">
-          <label>Phone (optional)</label>
-          <input type="tel" id="itemPhone" placeholder="e.g. +1 555-123-4567">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group fg-detail">
-          <label>Photos (optional)</label>
-          <div class="photo-upload-area" id="addPhotoArea" onclick="document.getElementById('addPhotoInput').click()">
-            Click or drag photos here (max 500KB each)
-          </div>
-          <input type="file" id="addPhotoInput" accept="image/*" multiple style="display:none" onchange="handleAddPhotos(event)">
-          <div class="photo-preview" id="addPhotoPreview"></div>
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group" style="flex:0 0 auto;justify-content:flex-end">
-          <button class="btn btn-primary" onclick="addItem()">Add Task</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>All Tasks</h2>
-      <div class="filter-bar">
-        <input type="text" id="itemSearch" placeholder="Search tasks..." oninput="renderItems()">
-        <select id="filterProperty" onchange="renderItems()"></select>
-        <select id="sortOrder" onchange="renderItems()">
-          <option value="date-time" selected>Sort: Date &rarr; Time</option>
-          <option value="date">Sort: Due Date</option>
-          <option value="priority">Sort: Priority</option>
-          <option value="priority-date">Sort: Priority &rarr; Date</option>
-          <option value="property">Sort: Property &rarr; Date</option>
-          <option value="date-property-priority">Sort: Date &rarr; Property &rarr; Priority</option>
-        </select>
-      </div>
-      <div id="bulkBar" style="display:none;background:#e8f0fe;border-radius:8px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <strong id="bulkCount" style="font-size:13px;color:#1a73e8">0 selected</strong>
-        <select id="bulkStatus" style="padding:6px 10px;font-size:13px">
-          <option value="">Change Status...</option>
-          <option value="To Do">To Do</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Done">Done</option>
-          <option value="Blocked">Blocked</option>
-        </select>
-        <button class="btn btn-primary btn-sm" onclick="bulkChangeStatus()">Apply</button>
-        <button class="btn btn-danger btn-sm" onclick="bulkDelete()">Delete Selected</button>
-        <button class="btn btn-outline btn-sm" onclick="clearBulkSelection()">Clear</button>
-      </div>
-      <div id="itemsTable"></div>
-    </div>
   </div>
 
-  <!-- Properties -->
+  <!-- Categories (formerly Properties) -->
   <div class="panel" id="panel-properties">
     <div class="card">
-      <h2>All Properties</h2>
+      <h2>All Categories</h2>
       <div id="propertiesTable"></div>
     </div>
 
     <div class="card">
-      <h2>Add New Property</h2>
+      <h2>Add New Category</h2>
       <div class="form-row">
         <div class="form-group">
-          <label>Property Name</label>
+          <label>Category Name</label>
           <input type="text" id="propName" placeholder="e.g. 123 Main St">
         </div>
         <div class="form-group">
@@ -591,26 +589,8 @@
         </div>
         <div class="form-group" style="flex:0 0 auto;justify-content:flex-end">
           <label>&nbsp;</label>
-          <button class="btn btn-primary" onclick="addProperty()">Add New Property</button>
+          <button class="btn btn-primary" onclick="addProperty()">Add New Category</button>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Categories -->
-  <div class="panel" id="panel-categories">
-    <div class="card">
-      <h2>All Categories</h2>
-      <div id="categoriesTable"></div>
-    </div>
-    <div class="card">
-      <h2>Add New Category</h2>
-      <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
-        <div style="flex:1;min-width:200px">
-          <label style="display:block;font-size:12px;font-weight:600;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px">Category Name</label>
-          <input type="text" id="newCategoryName" placeholder="e.g. Landscaping" style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px">
-        </div>
-        <button class="btn btn-primary" onclick="addCategory()" style="height:42px">Add New Category</button>
       </div>
     </div>
   </div>
@@ -625,7 +605,7 @@
           <select id="moveItem"></select>
         </div>
         <div class="form-group">
-          <label>Move To Property</label>
+          <label>Move To Category</label>
           <select id="moveTo"></select>
         </div>
         <div class="form-group">
@@ -649,7 +629,7 @@
       <h2>Activity History</h2>
       <div class="filter-bar">
         <select id="filterMoveProperty" onchange="renderMovements()">
-          <option value="">All Properties</option>
+          <option value="">All Categories</option>
         </select>
         <input type="date" id="filterMoveFrom" onchange="renderMovements()">
         <span style="color:#888;font-size:13px">to</span>
@@ -668,11 +648,11 @@
       <label>Task: <strong id="modalItemName"></strong></label>
     </div>
     <div class="form-group" style="margin-bottom:12px">
-      <label>Current Property</label>
+      <label>Current Category</label>
       <input type="text" id="modalFrom" disabled>
     </div>
     <div class="form-group" style="margin-bottom:12px">
-      <label>Move To Property</label>
+      <label>Move To Category</label>
       <select id="modalTo"></select>
     </div>
     <div class="form-group" style="margin-bottom:12px">
@@ -724,20 +704,8 @@
         <option value="Blocked">Blocked</option>
       </select>
     </div>
-    <div class="form-group fg-schedule" style="margin-bottom:12px">
-      <label>Priority</label>
-      <select id="editPriority">
-        <option value="Low">Low</option>
-        <option value="Medium">Medium</option>
-        <option value="High">High</option>
-      </select>
-    </div>
     <div class="form-group fg-core" style="margin-bottom:12px">
       <label>Category</label>
-      <select id="editCategory"></select>
-    </div>
-    <div class="form-group fg-core" style="margin-bottom:12px">
-      <label>Property</label>
       <select id="editProperty"></select>
     </div>
     <div class="form-group fg-schedule" style="margin-bottom:12px">
@@ -779,6 +747,14 @@
       <label>Phone</label>
       <input type="tel" id="editPhone" placeholder="e.g. +1 555-123-4567">
     </div>
+    <div class="form-group fg-detail" style="margin-bottom:12px">
+      <label>Email</label>
+      <input type="email" id="editEmail" placeholder="e.g. name@example.com">
+    </div>
+    <div class="form-group fg-detail" style="margin-bottom:12px">
+      <label>Address</label>
+      <input type="text" id="editAddress" placeholder="e.g. 123 Main St, City, ST">
+    </div>
     <div class="form-group" style="margin-bottom:12px">
       <label>Notes / Comments</label>
       <div id="editNotes" style="max-height:150px;overflow-y:auto;margin-bottom:6px"></div>
@@ -809,26 +785,47 @@
 </div>
 
 <script>
+const BUILD_ID = 'v14-cat-merge';
 const STORAGE_KEY = 'propertyTaskTracker';
 const MAX_PHOTO_SIZE = 500 * 1024; // 500KB per photo
 const COLORS = ['#1a73e8','#e65100','#1e8e3e','#d93025','#9334e6','#00897b','#c2185b','#6d4c41'];
 const CATEGORY_BADGES = { Maintenance: 'badge-blue', Repair: 'badge-red', Inspection: 'badge-orange', Renovation: 'badge-purple', Cleaning: 'badge-green', Other: 'badge-gray' };
 const STATUS_CLASSES = { 'To Do': 'status-todo', 'In Progress': 'status-in-progress', 'Done': 'status-done', 'Blocked': 'status-blocked' };
-const PRIORITY_BADGES = { High: 'badge-red', Medium: 'badge-orange', Low: 'badge-green' };
+
+function getSortedProperties() {
+  return (data.properties || []).slice().sort(function(a, b) {
+    return (a.name || '').toLowerCase().localeCompare((b.name || '').toLowerCase());
+  });
+}
+
+const PHOTO_KEY = STORAGE_KEY + '_photos';
 
 let data = loadData();
-// Initialize snapshot after load so first save() only stamps truly changed items
-setTimeout(function() { _lastSavedSnapshot = _snapshotItems(); }, 0);
 
 function loadData() {
   const saved = localStorage.getItem(STORAGE_KEY);
+  var parsed;
   if (saved) {
-    var parsed = JSON.parse(saved);
+    parsed = JSON.parse(saved);
     if (!parsed.categories) parsed.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
     if (!parsed.templates) parsed.templates = [];
-    return parsed;
+  } else {
+    parsed = { properties: [], items: [], movements: [], categories: ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'], templates: [] };
   }
-  return { properties: [], items: [], movements: [], categories: ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'], templates: [] };
+  // Reattach photos from the separate key. Photos are persisted out of band so
+  // the main save stays small (multi-MB writes to localStorage block the UI).
+  // Legacy data stored photos inline on each item — we keep those if the
+  // separate key doesn't have an entry, so users don't lose photos on upgrade.
+  var photoStr = localStorage.getItem(PHOTO_KEY);
+  if (photoStr) {
+    try {
+      var photoMap = JSON.parse(photoStr);
+      (parsed.items || []).forEach(function(item) {
+        if (photoMap[item.id]) item.photos = photoMap[item.id];
+      });
+    } catch (e) { console.error('Photo store load failed:', e); }
+  }
+  return parsed;
 }
 
 let syncKey = localStorage.getItem(STORAGE_KEY + '_syncKey') || '';
@@ -837,6 +834,96 @@ let syncWorkerUrl = 'https://t.rbarvani.workers.dev';
 let syncEnabled = false;
 let syncing = false;
 let syncingStartedAt = 0; // timestamp to detect stuck syncs
+// Server-assigned version for optimistic concurrency. 0 = never synced.
+let lastKnownServerVersion = parseInt(localStorage.getItem(STORAGE_KEY + '_serverVersion') || '0', 10);
+function setServerVersion(v) {
+  lastKnownServerVersion = v || 0;
+  localStorage.setItem(STORAGE_KEY + '_serverVersion', String(lastKnownServerVersion));
+}
+function markDirty() { localStorage.setItem(STORAGE_KEY + '_dirty', '1'); }
+function clearDirty() { localStorage.removeItem(STORAGE_KEY + '_dirty'); }
+function isDirty() { return localStorage.getItem(STORAGE_KEY + '_dirty') === '1'; }
+
+// localStorage on iOS WebKit caps at ~5MB. With photos as base64 plus daily
+// backups, writes can throw QuotaExceededError ("The quota has been exceeded.")
+// — most visibly on Force Pull. This wrapper frees space and retries.
+function safeLocalStorageSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    var isQuota = e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota/i.test(e.message || ''));
+    if (!isQuota) throw e;
+
+    // Free space progressively, retrying after each step.
+    var freeSteps = [
+      function() {
+        // 1. Drop any pending offline queue (already accepted server-side once it succeeds).
+        localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
+      },
+      function() {
+        // 2. Drop all daily auto-backups.
+        var toDrop = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          if (k && k.indexOf(STORAGE_KEY + '_backup_') === 0) toDrop.push(k);
+        }
+        toDrop.forEach(function(k) { localStorage.removeItem(k); });
+      },
+      function() {
+        // 3. Drop everything except sync key and the row we're trying to write.
+        Object.keys(localStorage).forEach(function(k) {
+          if (k === STORAGE_KEY + '_syncKey') return;
+          if (k === key) return;
+          if (k.indexOf(STORAGE_KEY) === 0) localStorage.removeItem(k);
+        });
+      }
+    ];
+
+    for (var i = 0; i < freeSteps.length; i++) {
+      try { freeSteps[i](); } catch (_) {}
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (e2) {
+        if (i === freeSteps.length - 1) {
+          var sizeMb = (value.length / 1024 / 1024).toFixed(1);
+          throw new Error('Out of local storage (' + sizeMb + ' MB) — too many photos. Open a task and delete some photos, then try again.');
+        }
+      }
+    }
+    return false;
+  }
+}
+
+// Nuclear: unregister SW, delete all caches, wipe local data (keep sync key), reload.
+// On next load the new code pulls a clean copy from cloud.
+async function hardReset() {
+  if (!confirm('RESET APP:\n• Unregister service worker\n• Delete all browser caches\n• Delete local task data on THIS device\n• Keep sync key\n• Reload\n\nCloud data is NOT touched. After reload, this device pulls cloud data fresh. Continue?')) return;
+  try {
+    var savedKey = localStorage.getItem(STORAGE_KEY + '_syncKey') || '';
+    // Wipe our localStorage keys (keep only sync key so auto-pull works after reload)
+    Object.keys(localStorage).forEach(function(k) {
+      if (k === STORAGE_KEY + '_syncKey') return;
+      if (k.indexOf(STORAGE_KEY) === 0) localStorage.removeItem(k);
+    });
+    if (savedKey) localStorage.setItem(STORAGE_KEY + '_syncKey', savedKey);
+    // Delete all caches
+    if ('caches' in window) {
+      var keys = await caches.keys();
+      await Promise.all(keys.map(function(k) { return caches.delete(k); }));
+    }
+    // Unregister all service workers
+    if ('serviceWorker' in navigator) {
+      var regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(function(r) { return r.unregister(); }));
+    }
+  } catch (e) {
+    console.error('hardReset error:', e);
+  }
+  // Force a cache-busted reload
+  location.replace(location.pathname + '?reset=' + Date.now());
+}
 let smsPhone = '3156913000@vtext.com';
 
 // Initialize SMS status display
@@ -850,62 +937,131 @@ let smsPhone = '3156913000@vtext.com';
 var _pushTimer = null;
 var _lastSavedSnapshot = {};
 // Fields tracked for field-level merge (sync conflict resolution)
-var _MERGE_FIELDS = ['name','category','propertyId','description','priority','status','dueDate','dueTime','url','urls','phone','alarm','alarmFired','notifyEmail','notifySms','recurrence','assignee','estimatedCost','actualCost','escalated','escalationReminded'];
-function _snapshotItems() {
-  var snap = {};
-  (data.items || []).forEach(function(item) {
-    var copy = JSON.parse(JSON.stringify(item));
-    delete copy._lastModified;
-    delete copy._fieldTs;
-    snap[item.id] = JSON.stringify(copy);
-  });
-  return snap;
-}
+var _MERGE_FIELDS = ['name','category','propertyId','description','status','dueDate','dueTime','url','urls','phone','email','address','alarm','alarmFired','notifyEmail','notifySms','recurrence','assignee','estimatedCost','actualCost','escalated','escalationReminded'];
+// _lastSavedSnapshot is no longer populated per item — the per-item stringify
+// was costing 1-2 multi-MB passes per save (photo payloads), and the result was
+// never read anywhere. Kept as a stub so callers that re-init it still work.
+function _snapshotItems() { return {}; }
 function _snapshotFields(item) {
   var s = {};
   _MERGE_FIELDS.forEach(function(f) { s[f] = JSON.stringify(item[f] !== undefined ? item[f] : null); });
   return s;
 }
 var _lastFieldSnapshot = {};
-function save() {
-  // Stamp modification time on items that changed; track per-field timestamps
-  var now = Date.now();
-  var currentSnap = _snapshotItems();
+
+// Strips photos from JSON.stringify — the main data write must not carry
+// base64 photo blobs, those persist in a separate key (see _writePhotos).
+function _stripPhotosReplacer(key, value) {
+  if (key === 'photos') return [];
+  return value;
+}
+
+// Cheap per-item photo fingerprint — change detection without scanning the
+// blob. If signatures match across saves, we skip the separate photo write
+// entirely (which is the only multi-MB write left after this rewrite).
+var _lastPhotoSig = {};
+function _photoSig(item) {
+  if (!item.photos || item.photos.length === 0) return '';
+  var sig = String(item.photos.length);
+  for (var i = 0; i < item.photos.length; i++) {
+    var p = item.photos[i] || '';
+    sig += ',' + p.length;
+  }
+  return sig;
+}
+
+function _writePhotos() {
+  var photoMap = {};
   (data.items || []).forEach(function(item) {
-    if (!item._fieldTs) item._fieldTs = {};
-    var prevSnap = _lastSavedSnapshot[item.id];
-    var currSnap = currentSnap[item.id];
-    var changed = !prevSnap || prevSnap !== currSnap;
-    if (changed) {
-      item._lastModified = now;
-      // Detect which fields changed and stamp them individually
-      var prevFields = _lastFieldSnapshot[item.id] || {};
-      var currFields = _snapshotFields(item);
-      _MERGE_FIELDS.forEach(function(f) {
-        if (prevFields[f] !== currFields[f]) {
-          item._fieldTs[f] = now;
-        }
-      });
-      // Backfill: any field without a timestamp gets the item's _lastModified
-      _MERGE_FIELDS.forEach(function(f) {
-        if (!item._fieldTs[f]) item._fieldTs[f] = item._lastModified;
-      });
-    }
+    if (item.photos && item.photos.length > 0) photoMap[item.id] = item.photos;
   });
-  _lastSavedSnapshot = _snapshotItems();
-  _lastFieldSnapshot = {};
-  (data.items || []).forEach(function(item) {
-    _lastFieldSnapshot[item.id] = _snapshotFields(item);
-  });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  if (syncEnabled && syncKey) {
-    if (_pushTimer) clearTimeout(_pushTimer);
-    _pushTimer = setTimeout(function() {
-      _pushTimer = null;
-      pushToCloud();
-    }, 300);
+  try {
+    safeLocalStorageSet(PHOTO_KEY, JSON.stringify(photoMap));
+  } catch (e) {
+    // If the photo write fails (quota), photos stay in memory and ride the
+    // next cloud push — don't let it block the main save.
+    console.warn('Photo store write failed; will retry next save:', e && e.message);
   }
 }
+
+// Save is debounced: many UI handlers call save() in quick succession (status
+// toggle, inline edits, bulk ops). On Brave/Windows with photo-heavy data, a
+// synchronous localStorage write of multi-MB JSON can block the UI thread for
+// seconds — and the safeLocalStorageSet quota-fallback chain compounds it.
+// Coalescing into a single write 300ms after the last change keeps the UI
+// responsive. flushSave() forces immediate write before sync push or unload.
+var _saveTimer = null;
+function save() {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(function() {
+    _saveTimer = null;
+    _performSave();
+  }, 300);
+}
+function flushSave() {
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    _performSave();
+  }
+}
+function _performSave() {
+  // Stamp modification time on items that changed; detect photo changes too.
+  var now = Date.now();
+  var nextFieldSnapshot = {};
+  var items = data.items || [];
+  var photosChanged = false;
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    if (!item._fieldTs) item._fieldTs = {};
+    var currFields = _snapshotFields(item);
+    var prevFields = _lastFieldSnapshot[item.id];
+    if (prevFields) {
+      for (var f = 0; f < _MERGE_FIELDS.length; f++) {
+        var fname = _MERGE_FIELDS[f];
+        if (prevFields[fname] !== currFields[fname]) {
+          item._fieldTs[fname] = now;
+          item._lastModified = now;
+        }
+      }
+    } else {
+      item._lastModified = item._lastModified || now;
+    }
+    nextFieldSnapshot[item.id] = currFields;
+    var sig = _photoSig(item);
+    var prevSig = _lastPhotoSig[item.id];
+    // Only treat as a photo change when there's actual photo content
+    // involved — without this, every newly-added item (prevSig undefined,
+    // sig '') trips photosChanged and the 5 MB photo blob is rewritten
+    // on every Add Task, even though no photo was attached.
+    if (sig !== prevSig && (sig || prevSig)) photosChanged = true;
+    _lastPhotoSig[item.id] = sig;
+  }
+  // Also detect deleted items that previously had photos
+  if (!photosChanged) {
+    var liveIds = {};
+    for (var li = 0; li < items.length; li++) liveIds[items[li].id] = true;
+    for (var oldId in _lastPhotoSig) {
+      if (!Object.prototype.hasOwnProperty.call(_lastPhotoSig, oldId)) continue;
+      if (_lastPhotoSig[oldId] && !liveIds[oldId]) { photosChanged = true; break; }
+    }
+  }
+  _lastFieldSnapshot = nextFieldSnapshot;
+  // Main data write — small (~10-100 KB) since photos are stripped. The
+  // single biggest win: localStorage.setItem now finishes in milliseconds
+  // instead of seconds, and never trips the safeLocalStorageSet quota chain.
+  safeLocalStorageSet(STORAGE_KEY, JSON.stringify(data, _stripPhotosReplacer));
+  if (photosChanged) _writePhotos();
+  markDirty();
+  // Sync is manual-only (Force Push / Force Pull) — no auto-push
+}
+
+// Flush any pending save before the tab is hidden, navigated away, or closed.
+window.addEventListener('beforeunload', flushSave);
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) flushSave();
+});
 
 var _renderTimer = null;
 function renderAllDebounced() {
@@ -914,6 +1070,53 @@ function renderAllDebounced() {
     _renderTimer = null;
     renderAll();
   }, 50);
+}
+
+// Debounce search inputs — typing was triggering full DOM rebuild per keystroke
+var _searchDebounceTimer = null;
+function debouncedRenderItems() {
+  if (_searchDebounceTimer) clearTimeout(_searchDebounceTimer);
+  _searchDebounceTimer = setTimeout(function() {
+    _searchDebounceTimer = null;
+    renderItems();
+  }, 200);
+}
+var _globalSearchDebounceTimer = null;
+function debouncedGlobalSearch() {
+  if (_globalSearchDebounceTimer) clearTimeout(_globalSearchDebounceTimer);
+  _globalSearchDebounceTimer = setTimeout(function() {
+    _globalSearchDebounceTimer = null;
+    renderGlobalSearch();
+  }, 200);
+}
+
+// Cache viewport size — read once per render, recompute on resize
+var _isMobileViewport = false;
+function _updateViewport() {
+  var prev = _isMobileViewport;
+  _isMobileViewport = window.matchMedia('(max-width: 768px)').matches;
+  if (prev !== _isMobileViewport) {
+    // Breakpoint flipped — re-render so the right layout is in the DOM
+    if (typeof renderAll === 'function') renderAllDebounced();
+  }
+}
+_updateViewport();
+var _resizeTimer = null;
+window.addEventListener('resize', function() {
+  if (_resizeTimer) clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(_updateViewport, 200);
+});
+
+// Re-render while preserving scroll position (used after sync merges)
+function _scrollPreservingRender() {
+  var scrollY = window.scrollY;
+  var container = document.getElementById('itemsTable');
+  var containerScroll = container ? container.scrollTop : 0;
+  // Render only the active tab — other tabs render lazily on switch via
+  // _dirtyTabs. Rendering every tab here used to cost seconds on large data.
+  renderAll(false);
+  window.scrollTo(0, scrollY);
+  if (container) container.scrollTop = containerScroll;
 }
 
 // --- Sync ---
@@ -932,8 +1135,6 @@ function toggleSync() {
     document.getElementById('syncKey').value = '';
     document.getElementById('syncToggleBtn').textContent = 'Connect';
     document.getElementById('syncToggleBtn').className = 'btn btn-primary';
-    document.getElementById('syncPullBtn').style.display = 'none';
-    document.getElementById('syncPushBtn').style.display = 'none';
     document.getElementById('syncForcePushBtn').style.display = 'none';
     document.getElementById('syncForcePullBtn').style.display = 'none';
     setSyncStatus('disconnected', 'Not connected');
@@ -950,12 +1151,10 @@ function toggleSync() {
   document.getElementById('syncKey').disabled = true;
   document.getElementById('syncToggleBtn').textContent = 'Disconnect';
   document.getElementById('syncToggleBtn').className = 'btn btn-danger';
-  document.getElementById('syncPullBtn').style.display = '';
-  document.getElementById('syncPushBtn').style.display = '';
   document.getElementById('syncForcePushBtn').style.display = '';
   document.getElementById('syncForcePullBtn').style.display = '';
-  pullFromCloud();
-  startAutoSync();
+  // Manual sync only — no auto-pull on connect
+  setSyncStatus('connected', 'Manual sync mode');
 }
 
 // Reset stuck syncing flag (iOS kills fetches on background/resume)
@@ -984,7 +1183,21 @@ function fetchWithTimeout(url, opts, ms) {
 
 // Merge two datasets: union items/properties/movements, prefer newer fields
 function mergeData(local, cloud) {
-  if (!cloud || !cloud.items) return JSON.parse(JSON.stringify(local));
+  // mergeData used to do up to 3 JSON.parse(JSON.stringify(item)) deep clones
+  // per matched item — for photo-laden items that meant cloning multi-MB
+  // payloads N times, dominating the dirty-pull freeze. We only need a single
+  // shallow clone to build the merged base; field access goes directly to
+  // lItem / cItem.
+  if (!cloud || !cloud.items) {
+    return {
+      items: (local.items || []).slice(),
+      properties: (local.properties || []).slice(),
+      movements: (local.movements || []).slice(),
+      categories: (local.categories || ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other']).slice(),
+      templates: (local.templates || []).slice(),
+      deletedItemIds: (local.deletedItemIds || []).slice()
+    };
+  }
   var localMap = {};
   (local.items || []).forEach(function(it) { localMap[it.id] = it; });
 
@@ -993,140 +1206,132 @@ function mergeData(local, cloud) {
   (local.deletedItemIds || []).forEach(function(id) { deletedSet[id] = true; });
   (cloud.deletedItemIds || []).forEach(function(id) { deletedSet[id] = true; });
 
+  var mergeFields = ['name','category','propertyId','description','status','dueDate','dueTime','url','urls','phone','email','address','alarm','alarmFired','notifyEmail','notifySms','recurrence','assignee','estimatedCost','actualCost','escalated','escalationReminded'];
+
   var mergedItems = [];
   var seen = {};
 
   // Process all cloud items, merging with local where both exist
   (cloud.items || []).forEach(function(cItem) {
-    if (deletedSet[cItem.id]) { seen[cItem.id] = true; return; } // skip deleted
+    if (deletedSet[cItem.id]) { seen[cItem.id] = true; return; }
     var lItem = localMap[cItem.id];
     if (lItem) {
-      // Both exist — field-level merge using per-field timestamps
       var lTime = lItem._lastModified || 0;
       var cTime = cItem._lastModified || 0;
       var lFs = lItem._fieldTs || {};
       var cFs = cItem._fieldTs || {};
-      // Start with the overall-newer item as base, then override per-field
-      var base = lTime >= cTime ? JSON.parse(JSON.stringify(lItem)) : JSON.parse(JSON.stringify(cItem));
-      var lCopy = JSON.parse(JSON.stringify(lItem));
-      var cCopy = JSON.parse(JSON.stringify(cItem));
-      // For each tracked field, pick the version with the newer field timestamp
-      var mergeFields = ['name','category','propertyId','description','priority','status','dueDate','dueTime','url','urls','phone','alarm','alarmFired','notifyEmail','notifySms','recurrence','assignee','estimatedCost','actualCost','escalated','escalationReminded'];
-      mergeFields.forEach(function(f) {
-        var lt = lFs[f] || lTime;
-        var ct = cFs[f] || cTime;
-        if (lt >= ct) {
-          base[f] = lCopy[f];
-        } else {
-          base[f] = cCopy[f];
-        }
-      });
-      // Merge _fieldTs: keep the newer timestamp for each field
+      var newer = lTime >= cTime ? lItem : cItem;
+      var base = {};
+      for (var k in newer) {
+        if (Object.prototype.hasOwnProperty.call(newer, k)) base[k] = newer[k];
+      }
+      for (var f = 0; f < mergeFields.length; f++) {
+        var fname = mergeFields[f];
+        var lt = lFs[fname] || lTime;
+        var ct = cFs[fname] || cTime;
+        base[fname] = lt >= ct ? lItem[fname] : cItem[fname];
+      }
       base._fieldTs = {};
-      mergeFields.forEach(function(f) {
-        base._fieldTs[f] = Math.max(lFs[f] || lTime, cFs[f] || cTime);
-      });
+      for (var ff = 0; ff < mergeFields.length; ff++) {
+        var fn = mergeFields[ff];
+        base._fieldTs[fn] = Math.max(lFs[fn] || lTime, cFs[fn] || cTime);
+      }
       base._lastModified = Math.max(lTime, cTime);
-      // Log conflicts for debugging
       if (lItem.dueDate !== cItem.dueDate || lItem.status !== cItem.status) {
-        console.log('[MERGE] field-level "' + (lItem.name||cItem.name) + '": local(due=' + lItem.dueDate + ' status=' + lItem.status + ' t=' + lTime + ' dueTs=' + (lFs.dueDate||'?') + ') vs cloud(due=' + cItem.dueDate + ' status=' + cItem.status + ' t=' + cTime + ' dueTs=' + (cFs.dueDate||'?') + ') → merged(due=' + base.dueDate + ' status=' + base.status + ')');
+        console.log('[MERGE] field-level "' + (lItem.name||cItem.name) + '": local(due=' + lItem.dueDate + ' status=' + lItem.status + ' t=' + lTime + ') vs cloud(due=' + cItem.dueDate + ' status=' + cItem.status + ' t=' + cTime + ') → merged(due=' + base.dueDate + ' status=' + base.status + ')');
       }
-      // Always union subtasks, notes, photos (keep the longer list)
-      if ((cCopy.subtasks || []).length > (lCopy.subtasks || []).length) {
-        base.subtasks = cCopy.subtasks;
-      } else {
-        base.subtasks = lCopy.subtasks;
-      }
-      if ((cCopy.notes || []).length > (lCopy.notes || []).length) {
-        base.notes = cCopy.notes;
-      } else {
-        base.notes = lCopy.notes;
-      }
-      if ((cCopy.photos || []).length > (lCopy.photos || []).length) {
-        base.photos = cCopy.photos;
-      } else {
-        base.photos = lCopy.photos;
-      }
+      // Union subtasks/notes/photos by keeping the longer list (by reference)
+      var ls = lItem.subtasks || [], cs = cItem.subtasks || [];
+      base.subtasks = cs.length > ls.length ? cs : ls;
+      var ln = lItem.notes || [], cn = cItem.notes || [];
+      base.notes = cn.length > ln.length ? cn : ln;
+      var lp = lItem.photos || [], cp = cItem.photos || [];
+      base.photos = cp.length > lp.length ? cp : lp;
       mergedItems.push(base);
     } else {
-      mergedItems.push(JSON.parse(JSON.stringify(cItem)));
+      // Cloud-only item — reference, no clone needed
+      mergedItems.push(cItem);
     }
     seen[cItem.id] = true;
   });
-  // Add local-only items (skip deleted)
   (local.items || []).forEach(function(lItem) {
-    if (!seen[lItem.id] && !deletedSet[lItem.id]) mergedItems.push(JSON.parse(JSON.stringify(lItem)));
+    if (!seen[lItem.id] && !deletedSet[lItem.id]) mergedItems.push(lItem);
   });
 
-  // Merge properties — union by id
   var mergedProps = (cloud.properties || []).slice();
   var propIds = {};
   mergedProps.forEach(function(p) { propIds[p.id] = true; });
   (local.properties || []).forEach(function(p) { if (!propIds[p.id]) mergedProps.push(p); });
 
-  // Merge movements — union by id
   var mergedMovements = (cloud.movements || []).slice();
   var movIds = {};
   mergedMovements.forEach(function(m) { movIds[m.id] = true; });
   (local.movements || []).forEach(function(m) { if (!movIds[m.id]) mergedMovements.push(m); });
 
-  // Filter out movements for deleted items
   var mergedDeletedIds = Object.keys(deletedSet);
   mergedMovements = mergedMovements.filter(function(m) { return !deletedSet[m.itemId]; });
 
-  var merged = JSON.parse(JSON.stringify(local));
-  merged.items = mergedItems;
-  merged.properties = mergedProps;
-  merged.movements = mergedMovements;
-  merged.deletedItemIds = mergedDeletedIds;
-  if (!merged.categories) merged.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
-  if (!merged.templates) merged.templates = local.templates || cloud.templates || [];
-  return merged;
+  return {
+    items: mergedItems,
+    properties: mergedProps,
+    movements: mergedMovements,
+    deletedItemIds: mergedDeletedIds,
+    categories: (local.categories || ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other']).slice(),
+    templates: local.templates || cloud.templates || []
+  };
 }
 
 async function pushToCloud() {
   unstickSync();
   if (!syncKey || syncing) return;
+  flushSave();
   syncing = true;
   syncingStartedAt = Date.now();
   setSyncStatus('syncing', 'Syncing...');
+  var attempts = 0;
   try {
-    // Pull-merge-push: read cloud first, merge with local, then write back
-    var cloud = null;
-    try {
-      var pullResp = await fetchWithTimeout(syncWorkerUrl + '/sync?key=' + encodeURIComponent(syncKey));
-      if (pullResp.ok) {
-        var pullResult = JSON.parse(await pullResp.text());
-        cloud = pullResult.data;
+    while (attempts < 3) {
+      attempts++;
+      var resp = await fetchWithTimeout(syncWorkerUrl + '/sync', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: syncKey, data: data, baseVersion: lastKnownServerVersion }),
+      });
+      var text = await resp.text();
+      if (!text) throw new Error('Empty response - check Worker URL and KV binding');
+      var result;
+      try { result = JSON.parse(text); } catch(e) { throw new Error('Invalid response: ' + text.substring(0, 100)); }
+
+      if (resp.status === 409 && result && result.conflict) {
+        // Another device pushed newer data. Pull it (merges dirty local edits), then retry.
+        console.log('[SYNC] 409 conflict — local base ' + lastKnownServerVersion + ' vs cloud ' + result.currentVersion + '. Pulling and retrying.');
+        syncing = false;
+        syncingStartedAt = 0;
+        await pullFromCloud();
+        syncing = true;
+        syncingStartedAt = Date.now();
+        continue;
       }
-    } catch(e) { /* If pull fails, just push local data */ }
 
-    // Merge cloud into local if cloud has data
-    if (cloud && cloud.items) {
-      data = mergeData(data, cloud);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      _lastSavedSnapshot = _snapshotItems();
+      if (!resp.ok) throw new Error(result.error || 'Push failed (status ' + resp.status + ')');
+
+      setServerVersion(result.version);
+      clearDirty();
+      setSyncStatus('connected', 'Synced v' + result.version + ' at ' + new Date().toLocaleTimeString());
+      localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
+      localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
+      syncing = false;
+      syncingStartedAt = 0;
+      return;
     }
-
-    // Now push the merged result
-    const resp = await fetchWithTimeout(syncWorkerUrl + '/sync', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: syncKey, data }),
-    });
-    const text = await resp.text();
-    if (!text) throw new Error('Empty response - check Worker URL and KV binding');
-    var result;
-    try { result = JSON.parse(text); } catch(e) { throw new Error('Invalid response: ' + text.substring(0, 100)); }
-    if (!resp.ok) throw new Error(result.error || 'Push failed (status ' + resp.status + ')');
-    setSyncStatus('connected', 'Synced ' + new Date().toLocaleTimeString());
-    localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
-    localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
-    renderAll(true);
+    throw new Error('Push kept conflicting after ' + attempts + ' tries — try Force Push to override.');
   } catch (err) {
     var msg = err.name === 'AbortError' ? 'Timeout' : err.message;
     var queue = JSON.parse(localStorage.getItem(STORAGE_KEY + '_offlineQueue') || '[]');
-    queue.push({ timestamp: new Date().toISOString(), data: JSON.parse(JSON.stringify(data)) });
+    // Strip photos from queued snapshot — photos already live in PHOTO_KEY /
+    // cloud, and deep-cloning the photo payload here was multi-MB per failed
+    // push.
+    queue.push({ timestamp: new Date().toISOString(), data: JSON.parse(JSON.stringify(data, _stripPhotosReplacer)) });
     if (queue.length > 5) queue = queue.slice(-5);
     localStorage.setItem(STORAGE_KEY + '_offlineQueue', JSON.stringify(queue));
     setSyncStatus('disconnected', 'Sync failed (' + queue.length + ' pending): ' + msg);
@@ -1148,47 +1353,92 @@ async function pullFromCloud() {
     var result;
     try { result = JSON.parse(text); } catch(e) { throw new Error('Invalid response: ' + text.substring(0, 100)); }
     if (!resp.ok) throw new Error(result.error || 'Pull failed (status ' + resp.status + ')');
-    if (result.data) {
-      data = mergeData(data, result.data);
-      // Ensure all tasks have required fields
-      data.items.forEach(function(item) {
-        if (!item.status) item.status = 'To Do';
-        if (!item.priority) item.priority = 'Medium';
-        if (!item.dueDate) item.dueDate = '';
-        if (!item.dueTime) item.dueTime = '';
-        if (!item.url) item.url = '';
-        if (!item.photos) item.photos = [];
-        if (item.alarm === undefined) item.alarm = '';
-        if (item.alarmFired === undefined) item.alarmFired = false;
-        if (!item.recurrence) item.recurrence = 'none';
-        if (!item.subtasks) item.subtasks = [];
-        if (!item.notes) item.notes = [];
-        if (item.escalated === undefined) item.escalated = false;
-        if (item.escalationReminded === undefined) item.escalationReminded = false;
-        if (!item.assignee) item.assignee = '';
-        if (item.estimatedCost === undefined) item.estimatedCost = 0;
-        if (item.actualCost === undefined) item.actualCost = 0;
-      });
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      _lastSavedSnapshot = _snapshotItems();
-      localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
-      localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
-      renderAll(true);
-      setSyncStatus('connected', 'Synced ' + new Date().toLocaleTimeString());
-      // If merged result differs from cloud, push back so cloud stays current
-      var mergedJson = JSON.stringify({ items: data.items, properties: data.properties, movements: data.movements, deletedItemIds: data.deletedItemIds });
-      var cloudJson = JSON.stringify({ items: result.data.items, properties: result.data.properties, movements: result.data.movements, deletedItemIds: result.data.deletedItemIds });
-      if (mergedJson !== cloudJson) {
-        console.log('[SYNC] Pull-merge produced different data than cloud — pushing back');
+
+    var cloudVersion = result.version || 0;
+    var cloudData = result.data;
+
+    if (!cloudData || !cloudData.items) {
+      // Cloud is empty — if we have local data and pending changes, push it
+      if (isDirty() && data && data.items && data.items.length > 0) {
         syncing = false;
         syncingStartedAt = 0;
-        pushToCloud();
-        return;
+        return pushToCloud();
       }
-    } else {
+      setSyncStatus('connected', 'Cloud is empty');
       syncing = false;
-      pushToCloud();
+      syncingStartedAt = 0;
       return;
+    }
+
+    // Skip the change-detection JSON.stringify(data) comparison that used to
+    // bracket this block — with photo-heavy data those stringify passes alone
+    // were costing 1-2 seconds each. The merge/replace below always changes
+    // data, so unconditional render after is correct.
+    var dirty = isDirty();
+    var replaced = false;
+
+    if (!dirty && cloudVersion > lastKnownServerVersion) {
+      // Clean replace: local has no unpushed edits and cloud is ahead.
+      // This is the path that fixes stale devices after a Force Push.
+      data = cloudData;
+      replaced = true;
+      console.log('[SYNC] Clean pull — replacing local (v' + lastKnownServerVersion + ' → v' + cloudVersion + ')');
+    } else if (dirty) {
+      // Merge to preserve unpushed local edits.
+      data = mergeData(data, cloudData);
+      console.log('[SYNC] Dirty pull — merging cloud v' + cloudVersion + ' with local edits');
+    } else {
+      // Clean and up to date — no change.
+      setSyncStatus('connected', 'Already synced (v' + cloudVersion + ')');
+      syncing = false;
+      syncingStartedAt = 0;
+      return;
+    }
+
+    // Ensure all tasks have required fields
+    data.items.forEach(function(item) {
+      if (!item.status) item.status = 'To Do';
+      if (!item.dueDate) item.dueDate = '';
+      if (!item.dueTime) item.dueTime = '';
+      if (!item.url) item.url = '';
+      if (!item.photos) item.photos = [];
+      if (item.alarm === undefined) item.alarm = '';
+      if (item.alarmFired === undefined) item.alarmFired = false;
+      if (!item.recurrence) item.recurrence = 'none';
+      if (!item.subtasks) item.subtasks = [];
+      if (!item.notes) item.notes = [];
+      if (item.escalated === undefined) item.escalated = false;
+      if (item.escalationReminded === undefined) item.escalationReminded = false;
+      if (!item.assignee) item.assignee = '';
+      if (item.estimatedCost === undefined) item.estimatedCost = 0;
+      if (item.actualCost === undefined) item.actualCost = 0;
+    });
+    if (!data.properties) data.properties = [];
+    if (!data.movements) data.movements = [];
+    if (!data.categories) data.categories = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
+    if (!data.templates) data.templates = [];
+
+    // Photo-stripped main write keeps STORAGE_KEY small; photos go to PHOTO_KEY.
+    safeLocalStorageSet(STORAGE_KEY, JSON.stringify(data, _stripPhotosReplacer));
+    _writePhotos();
+    _lastFieldSnapshot = {};
+    _lastPhotoSig = {};
+    (data.items || []).forEach(function(item) {
+      _lastFieldSnapshot[item.id] = _snapshotFields(item);
+      _lastPhotoSig[item.id] = _photoSig(item);
+    });
+    setServerVersion(cloudVersion);
+    if (replaced) clearDirty();
+    localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
+
+    _scrollPreservingRender();
+    setSyncStatus('connected', (replaced ? 'Pulled v' : 'Merged v') + cloudVersion + ' at ' + new Date().toLocaleTimeString());
+
+    // If we merged dirty local edits into cloud data, push the merged result back.
+    if (dirty && !replaced) {
+      syncing = false;
+      syncingStartedAt = 0;
+      return pushToCloud();
     }
   } catch (err) {
     var msg = err.name === 'AbortError' ? 'Timeout' : err.message;
@@ -1203,6 +1453,7 @@ async function forcePush() {
   if (!syncKey) return alert('Enter a sync key first.');
   if (!confirm('This will OVERWRITE the cloud with this device\'s ' + data.items.length + ' items. Other devices will get this data on next pull. Continue?')) return;
   unstickSync();
+  flushSave();
   syncing = true;
   syncingStartedAt = Date.now();
   setSyncStatus('syncing', 'Force pushing ' + data.items.length + ' items...');
@@ -1210,12 +1461,14 @@ async function forcePush() {
     var resp = await fetchWithTimeout(syncWorkerUrl + '/sync', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: syncKey, data: data }),
+      body: JSON.stringify({ key: syncKey, data: data, force: true }),
     });
     var text = await resp.text();
     var result = JSON.parse(text);
     if (!resp.ok) throw new Error(result.error || 'Failed');
-    setSyncStatus('connected', 'Force pushed ' + data.items.length + ' items at ' + new Date().toLocaleTimeString());
+    setServerVersion(result.version);
+    clearDirty();
+    setSyncStatus('connected', 'Force pushed v' + result.version + ' (' + data.items.length + ' items) at ' + new Date().toLocaleTimeString());
     localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
     localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
   } catch (err) {
@@ -1239,6 +1492,8 @@ async function forcePull() {
     if (!resp.ok) throw new Error(result.error || 'Failed');
     if (!result.data || !result.data.items) throw new Error('Cloud is empty — nothing to pull. Use Force Push from the device with the most data first.');
     data = result.data;
+    setServerVersion(result.version || 0);
+    clearDirty();
     // Ensure all fields
     if (!data.properties) data.properties = [];
     if (!data.movements) data.movements = [];
@@ -1246,7 +1501,6 @@ async function forcePull() {
     if (!data.templates) data.templates = [];
     data.items.forEach(function(item) {
       if (!item.status) item.status = 'To Do';
-      if (!item.priority) item.priority = 'Medium';
       if (!item.dueDate) item.dueDate = '';
       if (!item.dueTime) item.dueTime = '';
       if (!item.url) item.url = '';
@@ -1262,10 +1516,18 @@ async function forcePull() {
       if (item.estimatedCost === undefined) item.estimatedCost = 0;
       if (item.actualCost === undefined) item.actualCost = 0;
     });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    safeLocalStorageSet(STORAGE_KEY, JSON.stringify(data, _stripPhotosReplacer));
+    _writePhotos();
+    _lastFieldSnapshot = {};
+    _lastPhotoSig = {};
+    (data.items || []).forEach(function(item) {
+      _lastFieldSnapshot[item.id] = _snapshotFields(item);
+      _lastPhotoSig[item.id] = _photoSig(item);
+    });
     localStorage.setItem(STORAGE_KEY + '_lastSync', new Date().toISOString());
-    renderAll(true);
-    setSyncStatus('connected', 'Force pulled ' + data.items.length + ' items at ' + new Date().toLocaleTimeString());
+    localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
+    renderAll(false);
+    setSyncStatus('connected', 'Force pulled v' + (result.version || '?') + ' (' + data.items.length + ' items) at ' + new Date().toLocaleTimeString());
     if (!confirm('Pulled ' + data.items.length + ' items from cloud. All good?')) {
       // User said no — don't do anything else, they can see the data
     }
@@ -1279,47 +1541,18 @@ async function forcePull() {
 var _autoPullTimer = null;
 
 function startAutoSync() {
+  // Disabled — sync is manual-only via Force Push / Force Pull
   stopAutoSync();
-  _autoPullTimer = setInterval(function() {
-    if (syncEnabled && syncKey && !syncing) pullFromCloud();
-  }, 30000);
 }
 
 function stopAutoSync() {
   if (_autoPullTimer) { clearInterval(_autoPullTimer); _autoPullTimer = null; }
 }
 
-// Pull when app/tab regains focus (critical for iOS app switching)
-// iOS needs a brief delay after resume before network is ready
+// Auto-pull on focus/visibility disabled — sync is manual-only via Force Push / Force Pull
 document.addEventListener('visibilitychange', function() {
   if (!document.hidden && syncEnabled && syncKey) {
     unstickSync();
-    setTimeout(function() {
-      if (syncEnabled && syncKey && !syncing) pullFromCloud();
-    }, 500);
-  }
-});
-
-// Also handle iOS WebView/PWA resume via pageshow
-window.addEventListener('pageshow', function(e) {
-  if (syncEnabled && syncKey) {
-    unstickSync();
-    setTimeout(function() {
-      if (syncEnabled && syncKey && !syncing) pullFromCloud();
-    }, 500);
-    // Restart auto-sync timer (iOS kills setInterval on background)
-    startAutoSync();
-  }
-});
-
-// focus event — some iOS scenarios fire focus but not visibilitychange
-window.addEventListener('focus', function() {
-  if (syncEnabled && syncKey) {
-    unstickSync();
-    setTimeout(function() {
-      if (syncEnabled && syncKey && !syncing) pullFromCloud();
-    }, 600);
-    startAutoSync();
   }
 });
 
@@ -1333,8 +1566,14 @@ function replayOfflineQueue() {
   var latest = queue[queue.length - 1];
   console.log('[SYNC] Replaying offline queue (' + queue.length + ' entries) — merging, not overwriting');
   data = mergeData(data, latest.data);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  _lastSavedSnapshot = _snapshotItems();
+  safeLocalStorageSet(STORAGE_KEY, JSON.stringify(data, _stripPhotosReplacer));
+  _writePhotos();
+  _lastFieldSnapshot = {};
+  _lastPhotoSig = {};
+  (data.items || []).forEach(function(item) {
+    _lastFieldSnapshot[item.id] = _snapshotFields(item);
+    _lastPhotoSig[item.id] = _photoSig(item);
+  });
   localStorage.removeItem(STORAGE_KEY + '_offlineQueue');
   pushToCloud();
 }
@@ -1347,8 +1586,6 @@ function initSync() {
     syncEnabled = true;
     document.getElementById('syncToggleBtn').textContent = 'Disconnect';
     document.getElementById('syncToggleBtn').className = 'btn btn-danger';
-    document.getElementById('syncPullBtn').style.display = '';
-    document.getElementById('syncPushBtn').style.display = '';
     document.getElementById('syncForcePushBtn').style.display = '';
     document.getElementById('syncForcePullBtn').style.display = '';
     pullFromCloud();
@@ -1431,6 +1668,17 @@ function renderUrl(urlOrUrls) {
 function renderInlineUrlSection(item) {
   var iid = item.id;
   var urls = getItemUrls(item);
+  var hasUrls = urls.length > 0;
+  var headerLabel = hasUrls ? urls.length + ' link' + (urls.length > 1 ? 's' : '') : 'links';
+  // Lazy-render: empty URL panel mounts only on click (saves an <input> per task)
+  if (!hasUrls) {
+    return '<div style="margin-top:4px;padding-left:4px">'
+      + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="expandUrlPanel(this,\'' + iid + '\')">'
+      + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block">&#9654;</span>'
+      + '<span style="font-size:11px;color:#888">' + headerLabel + '</span>'
+      + '</div>'
+      + '</div>';
+  }
   var urlRows = urls.map(function(url, idx) {
     var display = url.length > 50 ? url.substring(0, 50) + '...' : url;
     return '<div style="display:flex;align-items:center;gap:6px;padding:1px 0;font-size:12px">'
@@ -1442,16 +1690,31 @@ function renderInlineUrlSection(item) {
     + '<span style="font-size:12px;color:#1a73e8;flex-shrink:0">+</span>'
     + '<input type="text" placeholder="Add URL..." style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);outline:none;min-width:0" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddUrl(\'' + iid + '\',this)}">'
     + '</div>';
-  var hasUrls = urls.length > 0;
-  var headerLabel = hasUrls ? urls.length + ' link' + (urls.length > 1 ? 's' : '') : 'links';
-  var panelDisplay = hasUrls ? '' : 'display:none';
   return '<div style="margin-top:4px;padding-left:4px">'
     + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="toggleSubtaskPanel(this)">'
-    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;' + (hasUrls ? 'transform:rotate(90deg)' : '') + '">&#9654;</span>'
+    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>'
     + '<span style="font-size:11px;color:#888">' + headerLabel + '</span>'
     + '</div>'
-    + '<div class="st-panel" style="margin-top:2px;' + panelDisplay + '">' + urlRows + addRow + '</div>'
+    + '<div class="st-panel" style="margin-top:2px">' + urlRows + addRow + '</div>'
     + '</div>';
+}
+
+function expandUrlPanel(header, iid) {
+  var arrow = header.querySelector('.st-toggle-arrow');
+  if (arrow) arrow.style.transform = 'rotate(90deg)';
+  var wrapper = header.parentElement;
+  if (!wrapper) return;
+  var panel = document.createElement('div');
+  panel.className = 'st-panel';
+  panel.style.marginTop = '2px';
+  panel.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:1px 0">'
+    + '<span style="font-size:12px;color:#1a73e8;flex-shrink:0">+</span>'
+    + '<input type="text" placeholder="Add URL..." style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);outline:none;min-width:0" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddUrl(\'' + iid + '\',this)}">'
+    + '</div>';
+  wrapper.appendChild(panel);
+  header.setAttribute('onclick', 'toggleSubtaskPanel(this)');
+  var inp = panel.querySelector('input');
+  if (inp) inp.focus();
 }
 
 function inlineAddUrl(itemId, inputEl) {
@@ -1540,11 +1803,135 @@ function removeEditUrl(idx) {
   renderEditUrls();
 }
 
-function renderPhotos(photos) {
+function renderPhotos(photos, itemId) {
   if (!photos || photos.length === 0) return '';
-  return '<div class="task-photos">' + photos.map(function(src) {
-    return '<img src="' + src + '" onclick="event.stopPropagation();openLightbox(this.src)" alt="Photo">';
-  }).join('') + '</div>';
+  // Emit a lightweight placeholder. The real <img src="data:..."> blobs are
+  // attached via DOM after the main innerHTML parse — embedding multi-MB
+  // base64 strings in the HTML stalls the HTML parser for seconds on large
+  // data sets. attachPendingPhotos() fills these in lazily.
+  return '<div class="task-photos" data-pi="' + itemId + '"></div>';
+}
+
+// Photo lazy-attach: walks unfilled .task-photos placeholders and attaches
+// their <img> elements only when scrolled near the viewport. Base64 data
+// URLs are converted to Blob URLs once and cached — assigning a multi-KB
+// base64 string to img.src forces the browser to re-decode the base64 on
+// every paint, which froze scroll when many photos came into view at once.
+var _photoObserver = null;
+var _photoBlobCache = {}; // dataUrl → blob URL, populated on first use
+function _getPhotoSrc(src) {
+  if (!src) return '';
+  if (src.charCodeAt(0) !== 100 /* 'd' */ || src.substring(0, 5) !== 'data:') return src;
+  var cached = _photoBlobCache[src];
+  if (cached) return cached;
+  try {
+    var comma = src.indexOf(',');
+    if (comma === -1) return src;
+    var header = src.substring(0, comma);
+    var mimeMatch = header.match(/data:([^;]+)/);
+    var mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    var binary = atob(src.substring(comma + 1));
+    var len = binary.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) bytes[i] = binary.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    _photoBlobCache[src] = url;
+    return url;
+  } catch (e) {
+    return src;
+  }
+}
+
+// Photo fills are queued and drained one-per-rAF — fast scrolling used to fire
+// the IO callback for many placeholders in one frame, and converting + decoding
+// several 100KB base64 strings in a row blocked the main thread.
+var _photoFillQueue = [];
+var _photoFillScheduled = false;
+function _queuePhotoFill(div) {
+  _photoFillQueue.push(div);
+  if (!_photoFillScheduled) {
+    _photoFillScheduled = true;
+    requestAnimationFrame(_drainPhotoFills);
+  }
+}
+function _drainPhotoFills() {
+  _photoFillScheduled = false;
+  var deadline = performance.now() + 6; // give the rest of the frame back
+  while (_photoFillQueue.length && performance.now() < deadline) {
+    _fillPhotoDiv(_photoFillQueue.shift());
+  }
+  if (_photoFillQueue.length) {
+    _photoFillScheduled = true;
+    requestAnimationFrame(_drainPhotoFills);
+  }
+}
+
+function _fillPhotoDiv(div) {
+  if (div.dataset.piFilled === '1') return;
+  var item = getItem(div.dataset.pi);
+  if (!item || !item.photos || item.photos.length === 0) {
+    div.dataset.piFilled = '1';
+    return;
+  }
+  // Show ONE thumbnail per row plus a "+N" badge. Decoding 3 JPEGs per row
+  // for hundreds of rows forced many concurrent image decodes during scroll;
+  // dropping to a single thumbnail cuts decode work by ~3× and keeps memory
+  // pressure (decoded images cost ~2 MB each in GPU/RAM) much lower. The
+  // full gallery is still available via the row's Edit button.
+  var firstSrc = _getPhotoSrc(item.photos[0]);
+  var frag = document.createDocumentFragment();
+  var img = document.createElement('img');
+  img.src = firstSrc;
+  img.loading = 'lazy';
+  img.decoding = 'async';
+  img.width = 48;
+  img.height = 48;
+  img.alt = 'Photo';
+  (function(src) {
+    img.addEventListener('click', function(e) { e.stopPropagation(); openLightbox(src); });
+  })(firstSrc);
+  frag.appendChild(img);
+  if (item.photos.length > 1) {
+    var more = document.createElement('span');
+    more.textContent = '+' + (item.photos.length - 1);
+    more.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;background:#f0f2f5;border-radius:6px;font-size:12px;color:#666';
+    var iid = item.id;
+    more.addEventListener('click', function(e) { e.stopPropagation(); openEditModal(iid); });
+    more.style.cursor = 'pointer';
+    more.title = 'Open task to see all ' + item.photos.length + ' photos';
+    frag.appendChild(more);
+  }
+  div.appendChild(frag);
+  div.dataset.piFilled = '1';
+}
+function attachPendingPhotos() {
+  var divs = document.querySelectorAll('div.task-photos[data-pi]:not([data-pi-filled])');
+  if (divs.length === 0) return;
+  if (typeof IntersectionObserver === 'function') {
+    if (!_photoObserver) {
+      _photoObserver = new IntersectionObserver(function(entries) {
+        for (var i = 0; i < entries.length; i++) {
+          if (entries[i].isIntersecting) {
+            _photoObserver.unobserve(entries[i].target);
+            _queuePhotoFill(entries[i].target);
+          }
+        }
+      }, { rootMargin: '100px 0px' });
+    }
+    for (var i = 0; i < divs.length; i++) _photoObserver.observe(divs[i]);
+  } else {
+    // No IO — chunked fill across animation frames so we never block long.
+    var arr = Array.prototype.slice.call(divs);
+    var idx = 0;
+    function step() {
+      var deadline = performance.now() + 8;
+      while (idx < arr.length && performance.now() < deadline) {
+        _fillPhotoDiv(arr[idx++]);
+      }
+      if (idx < arr.length) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
 }
 
 function renderAlarm(item) {
@@ -1576,7 +1963,7 @@ function downloadCalendarEvent(itemId) {
       + pad(d.getUTCSeconds()) + 'Z';
   }
 
-  var desc = 'Property: ' + propName;
+  var desc = 'Category: ' + propName;
   if (item.description) desc += '\\n' + item.description;
   var itemUrlList = getItemUrls(item);
   if (itemUrlList.length > 0) desc += '\\n' + itemUrlList.join('\\n');
@@ -1633,7 +2020,7 @@ function exportAllAlarms() {
     var propName = prop ? prop.name : 'Unknown';
     var alarmDt = new Date(item.alarm);
     var endDt = new Date(alarmDt.getTime() + 30 * 60000);
-    var desc = 'Property: ' + propName;
+    var desc = 'Category: ' + propName;
     if (item.description) desc += '\\n' + item.description;
     return [
       'BEGIN:VEVENT',
@@ -1721,30 +2108,38 @@ function stDrop(e, targetIdx) {
   _stDrag.source = null; if (_stDrag.callback) _stDrag.callback();
 }
 
+function buildAddSubtaskRowHTML(st, idx) {
+  return '<div draggable="true" ondragstart="stDragStart(event,pendingAddSubtasks,' + idx + ',renderAddSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:13px;transition:border-top 0.1s">'
+    + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
+    + '<input type="checkbox" style="margin-top:4px" ' + (st.done ? 'checked' : '') + ' onchange="toggleAddSubtask(' + idx + ')">'
+    + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:2px 6px;font-size:13px;font-family:inherit;border-radius:4px;resize:none;overflow:hidden;min-height:0;' + (st.done ? 'text-decoration:line-through;color:#999' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameAddSubtask(' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(st.text) + '</textarea>'
+    + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:2px" onclick="removeAddSubtask(' + idx + ')">x</button>'
+    + '</div>';
+}
+
 function renderAddSubtasks() {
   var el = document.getElementById('addSubtasks');
   if (pendingAddSubtasks.length === 0) {
     el.innerHTML = '<p style="color:#aaa;font-size:12px">No subtasks yet</p>';
     return;
   }
-  el.innerHTML = pendingAddSubtasks.map(function(st, idx) {
-    return '<div draggable="true" ondragstart="stDragStart(event,pendingAddSubtasks,' + idx + ',renderAddSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;font-size:13px;transition:border-top 0.1s">'
-      + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
-      + '<input type="checkbox" style="margin-top:4px" ' + (st.done ? 'checked' : '') + ' onchange="toggleAddSubtask(' + idx + ')">'
-      + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:2px 6px;font-size:13px;font-family:inherit;border-radius:4px;resize:none;overflow:hidden;min-height:0;' + (st.done ? 'text-decoration:line-through;color:#999' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameAddSubtask(' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(st.text) + '</textarea>'
-      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:2px" onclick="removeAddSubtask(' + idx + ')">x</button>'
-      + '</div>';
-  }).join('');
-  setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
+  el.innerHTML = pendingAddSubtasks.map(buildAddSubtaskRowHTML).join('');
+  autoSizeAllSubtasks(el);
 }
 
 function addAddSubtask() {
   var inp = document.getElementById('addNewSubtask');
   var text = inp.value.trim();
   if (!text) return;
-  pendingAddSubtasks.push({ id: genId(), text: text, done: false });
+  var st = { id: genId(), text: text, done: false };
+  var firstAdd = pendingAddSubtasks.length === 0;
+  pendingAddSubtasks.push(st);
   inp.value = '';
-  renderAddSubtasks();
+  var el = document.getElementById('addSubtasks');
+  if (firstAdd) el.innerHTML = '';
+  el.insertAdjacentHTML('beforeend', buildAddSubtaskRowHTML(st, pendingAddSubtasks.length - 1));
+  var ta = el.lastElementChild && el.lastElementChild.querySelector('textarea');
+  if (ta) autoSizeSubtask(ta);
 }
 
 function toggleAddSubtask(idx) {
@@ -1764,34 +2159,55 @@ function removeAddSubtask(idx) {
   renderAddSubtasks();
 }
 
+function buildEditSubtaskRowHTML(st, idx, total) {
+  var lastIdx = (total != null ? total : pendingEditSubtasks.length) - 1;
+  return '<div draggable="true" ondragstart="stDragStart(event,pendingEditSubtasks,' + idx + ',renderEditSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;transition:border-top 0.1s">'
+    + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
+    + '<span style="display:inline-flex;flex-direction:column;gap:0;flex-shrink:0;margin-top:0">'
+    + '<button onclick="moveEditSubtask(' + idx + ',-1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:10px;line-height:1;color:' + (idx === 0 ? '#ddd' : '#888') + ';' + (idx === 0 ? 'pointer-events:none' : '') + '" title="Move up">&#9650;</button>'
+    + '<button onclick="moveEditSubtask(' + idx + ',1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:10px;line-height:1;color:' + (idx === lastIdx ? '#ddd' : '#888') + ';' + (idx === lastIdx ? 'pointer-events:none' : '') + '" title="Move down">&#9660;</button>'
+    + '</span>'
+    + '<input type="checkbox" style="margin-top:4px" ' + (st.done ? 'checked' : '') + ' onchange="toggleEditSubtask(' + idx + ')">'
+    + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:2px 6px;font-size:13px;font-family:inherit;border-radius:4px;resize:none;overflow:hidden;min-height:0;' + (st.done ? 'text-decoration:line-through;color:#aaa' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameEditSubtask(' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(st.text) + '</textarea>'
+    + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:2px" onclick="removeEditSubtask(' + idx + ')">x</button>'
+    + '</div>';
+}
+
 function renderEditSubtasks() {
   var el = document.getElementById('editSubtasks');
   if (pendingEditSubtasks.length === 0) {
     el.innerHTML = '<p style="color:#aaa;font-size:12px">No subtasks yet</p>';
     return;
   }
-  el.innerHTML = pendingEditSubtasks.map(function(st, idx) {
-    return '<div draggable="true" ondragstart="stDragStart(event,pendingEditSubtasks,' + idx + ',renderEditSubtasks)" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;transition:border-top 0.1s">'
-      + '<span style="cursor:grab;color:#aaa;font-size:14px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
-      + '<span style="display:inline-flex;flex-direction:column;gap:0;flex-shrink:0;margin-top:0">'
-      + '<button onclick="moveEditSubtask(' + idx + ',-1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:10px;line-height:1;color:' + (idx === 0 ? '#ddd' : '#888') + ';' + (idx === 0 ? 'pointer-events:none' : '') + '" title="Move up">&#9650;</button>'
-      + '<button onclick="moveEditSubtask(' + idx + ',1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:10px;line-height:1;color:' + (idx === pendingEditSubtasks.length - 1 ? '#ddd' : '#888') + ';' + (idx === pendingEditSubtasks.length - 1 ? 'pointer-events:none' : '') + '" title="Move down">&#9660;</button>'
-      + '</span>'
-      + '<input type="checkbox" style="margin-top:4px" ' + (st.done ? 'checked' : '') + ' onchange="toggleEditSubtask(' + idx + ')">'
-      + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:2px 6px;font-size:13px;font-family:inherit;border-radius:4px;resize:none;overflow:hidden;min-height:0;' + (st.done ? 'text-decoration:line-through;color:#aaa' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';renameEditSubtask(' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(st.text) + '</textarea>'
-      + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px;margin-top:2px" onclick="removeEditSubtask(' + idx + ')">x</button>'
-      + '</div>';
-  }).join('');
-  setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
+  var total = pendingEditSubtasks.length;
+  el.innerHTML = pendingEditSubtasks.map(function(st, idx) { return buildEditSubtaskRowHTML(st, idx, total); }).join('');
+  autoSizeAllSubtasks(el);
 }
 
 function addEditSubtask() {
   var inp = document.getElementById('editNewSubtask');
   var text = inp.value.trim();
   if (!text) return;
-  pendingEditSubtasks.push({ id: genId(), text: text, done: false });
+  var st = { id: genId(), text: text, done: false };
+  var firstAdd = pendingEditSubtasks.length === 0;
+  pendingEditSubtasks.push(st);
   inp.value = '';
-  renderEditSubtasks();
+  var el = document.getElementById('editSubtasks');
+  if (firstAdd) {
+    el.innerHTML = '';
+  } else {
+    var prevLast = el.lastElementChild;
+    if (prevLast) {
+      var prevDownBtn = prevLast.querySelectorAll('button[title="Move down"]')[0];
+      if (prevDownBtn) {
+        prevDownBtn.style.color = '#888';
+        prevDownBtn.style.pointerEvents = '';
+      }
+    }
+  }
+  el.insertAdjacentHTML('beforeend', buildEditSubtaskRowHTML(st, pendingEditSubtasks.length - 1, pendingEditSubtasks.length));
+  var ta = el.lastElementChild && el.lastElementChild.querySelector('textarea');
+  if (ta) autoSizeSubtask(ta);
 }
 
 function toggleEditSubtask(idx) {
@@ -1827,36 +2243,62 @@ function renderSubtaskBadge(item) {
   var total = hasSubs ? item.subtasks.length : 0;
   var pct = total > 0 ? Math.round((done / total) * 100) : 0;
   var color = pct === 100 ? '#1e8e3e' : '#1a73e8';
-  var rows = '';
-  if (hasSubs) {
-    rows = item.subtasks.map(function(s, idx) {
-      return '<div draggable="true" ondragstart="stDragStart(event,_stInlineRef[\'' + iid + '\'],' + idx + ',function(){inlineSaveSubtaskOrder(\'' + iid + '\')})" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;padding:2px 0;font-size:12px;color:var(--text2);transition:border-top 0.1s">'
-        + '<span style="cursor:grab;color:#aaa;font-size:12px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
-        + '<span style="display:inline-flex;flex-direction:column;gap:0;flex-shrink:0;margin-top:-1px">'
-        + '<button onclick="moveSubtask(\'' + iid + '\',' + idx + ',-1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:9px;line-height:1;color:' + (idx === 0 ? '#ddd' : '#888') + ';' + (idx === 0 ? 'pointer-events:none' : '') + '" title="Move up">&#9650;</button>'
-        + '<button onclick="moveSubtask(\'' + iid + '\',' + idx + ',1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:9px;line-height:1;color:' + (idx === item.subtasks.length - 1 ? '#ddd' : '#888') + ';' + (idx === item.subtasks.length - 1 ? 'pointer-events:none' : '') + '" title="Move down">&#9660;</button>'
-        + '</span>'
-        + '<input type="checkbox"' + (s.done ? ' checked' : '') + ' onchange="inlineToggleSubtask(\'' + iid + '\',' + idx + ')" style="width:14px;height:14px;accent-color:#1e8e3e;flex-shrink:0;margin-top:2px">'
-        + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);resize:none;overflow:hidden;min-height:0;' + (s.done ? 'text-decoration:line-through;opacity:0.5' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';inlineRenameSubtask(\'' + iid + '\',' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(s.text) + '</textarea>'
-        + '</div>';
-    }).join('');
-    if (!_inlineDragging) _stInlineRef[iid] = item.subtasks;
+  var headerLabel = hasSubs ? done + '/' + total + ' subtasks' : 'sub-tasks';
+  var progressBar = hasSubs ? ' <div class="progress-bar" style="width:80px;height:4px"><div class="progress-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' : '';
+  // For tasks with zero subtasks, render only the collapsed header. The full
+  // panel (with textareas, drag handlers, etc.) is mounted lazily on click.
+  if (!hasSubs) {
+    return '<div style="margin-top:6px;padding-left:4px" data-st-iid="' + iid + '">'
+      + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="expandSubtaskPanel(this,\'' + iid + '\')">'
+      + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block">&#9654;</span>'
+      + '<span style="font-size:11px;color:#888">' + headerLabel + '</span>'
+      + '</div>'
+      + '</div>';
   }
+  if (!_inlineDragging) _stInlineRef[iid] = item.subtasks;
+  var rows = item.subtasks.map(function(s, idx) {
+    return '<div draggable="true" ondragstart="stDragStart(event,_stInlineRef[\'' + iid + '\'],' + idx + ',function(){inlineSaveSubtaskOrder(\'' + iid + '\')})" ondragend="stDragEnd(event)" ondragover="stDragOver(event)" ondragleave="stDragLeave(event)" ondrop="stDrop(event,' + idx + ')" style="display:flex;align-items:flex-start;gap:6px;padding:2px 0;font-size:12px;color:var(--text2);transition:border-top 0.1s">'
+      + '<span style="cursor:grab;color:#aaa;font-size:12px;flex-shrink:0;user-select:none;margin-top:2px" title="Drag to reorder">⠿</span>'
+      + '<span style="display:inline-flex;flex-direction:column;gap:0;flex-shrink:0;margin-top:-1px">'
+      + '<button onclick="moveSubtask(\'' + iid + '\',' + idx + ',-1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:9px;line-height:1;color:' + (idx === 0 ? '#ddd' : '#888') + ';' + (idx === 0 ? 'pointer-events:none' : '') + '" title="Move up">&#9650;</button>'
+      + '<button onclick="moveSubtask(\'' + iid + '\',' + idx + ',1)" style="border:none;background:none;padding:0 2px;cursor:pointer;font-size:9px;line-height:1;color:' + (idx === item.subtasks.length - 1 ? '#ddd' : '#888') + ';' + (idx === item.subtasks.length - 1 ? 'pointer-events:none' : '') + '" title="Move down">&#9660;</button>'
+      + '</span>'
+      + '<input type="checkbox"' + (s.done ? ' checked' : '') + ' onchange="inlineToggleSubtask(\'' + iid + '\',' + idx + ')" style="width:14px;height:14px;accent-color:#1e8e3e;flex-shrink:0;margin-top:2px">'
+      + '<textarea class="st-textarea" rows="1" style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);resize:none;overflow:hidden;min-height:0;' + (s.done ? 'text-decoration:line-through;opacity:0.5' : '') + '" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\';inlineRenameSubtask(\'' + iid + '\',' + idx + ',this.value)" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="autoSizeSubtask(this)">' + esc(s.text) + '</textarea>'
+      + '</div>';
+  }).join('');
   var addRow = '<div style="display:flex;align-items:center;gap:6px;padding:2px 0;margin-top:2px">'
     + '<span style="font-size:12px;color:#1a73e8;flex-shrink:0">+</span>'
     + '<input type="text" placeholder="Add sub-task..." style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);outline:none" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddSubtask(\'' + iid + '\',this)}">'
     + '</div>';
-  var headerLabel = hasSubs ? done + '/' + total + ' subtasks' : 'sub-tasks';
-  var progressBar = hasSubs ? ' <div class="progress-bar" style="width:80px;height:4px"><div class="progress-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' : '';
-  var panelDisplay = hasSubs ? '' : 'display:none';
   return '<div style="margin-top:6px;padding-left:4px">'
     + '<div style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none" onclick="toggleSubtaskPanel(this)">'
-    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;' + (hasSubs ? 'transform:rotate(90deg)' : '') + '">&#9654;</span>'
+    + '<span class="st-toggle-arrow" style="font-size:10px;color:#888;transition:transform 0.2s;display:inline-block;transform:rotate(90deg)">&#9654;</span>'
     + '<span style="font-size:11px;color:#888">' + headerLabel + '</span>'
     + progressBar
     + '</div>'
-    + '<div class="st-panel" style="margin-top:4px;' + panelDisplay + '">' + rows + addRow + '</div>'
+    + '<div class="st-panel" style="margin-top:4px">' + rows + addRow + '</div>'
     + '</div>';
+}
+
+// Lazy-mount the empty-state subtask add-input only when the user clicks to expand
+function expandSubtaskPanel(header, iid) {
+  var arrow = header.querySelector('.st-toggle-arrow');
+  if (arrow) arrow.style.transform = 'rotate(90deg)';
+  var wrapper = header.parentElement;
+  if (!wrapper) return;
+  var panel = document.createElement('div');
+  panel.className = 'st-panel';
+  panel.style.marginTop = '4px';
+  panel.innerHTML = '<div style="display:flex;align-items:center;gap:6px;padding:2px 0;margin-top:2px">'
+    + '<span style="font-size:12px;color:#1a73e8;flex-shrink:0">+</span>'
+    + '<input type="text" placeholder="Add sub-task..." style="flex:1;border:1px solid transparent;background:transparent;padding:1px 4px;font-size:12px;font-family:inherit;border-radius:4px;color:var(--text2);outline:none" onfocus="this.style.borderColor=\'#1a73e8\';this.style.background=\'var(--input-bg)\'" onblur="this.style.borderColor=\'transparent\';this.style.background=\'transparent\'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();inlineAddSubtask(\'' + iid + '\',this)}">'
+    + '</div>';
+  wrapper.appendChild(panel);
+  // Toggle now becomes the regular collapse handler on subsequent clicks
+  header.setAttribute('onclick', 'toggleSubtaskPanel(this)');
+  var inp = panel.querySelector('input');
+  if (inp) inp.focus();
 }
 
 function autoSizeSubtask(el) {
@@ -1865,7 +2307,25 @@ function autoSizeSubtask(el) {
 }
 function autoSizeAllSubtasks(container) {
   if (!container) return;
-  container.querySelectorAll('textarea').forEach(function(ta) { autoSizeSubtask(ta); });
+  // Skip textareas in panels that are currently hidden (display:none) — their
+  // scrollHeight is 0 anyway, but the read still costs a forced layout.
+  // Batch reads then writes to avoid per-element layout thrashing.
+  var nodes = container.querySelectorAll('textarea.st-textarea');
+  if (!nodes.length) return;
+  var visible = [];
+  for (var i = 0; i < nodes.length; i++) {
+    var ta = nodes[i];
+    // offsetParent is null when element or an ancestor is display:none — fast check
+    if (ta.offsetParent !== null) visible.push(ta);
+  }
+  if (!visible.length) return;
+  // First pass: zero heights (writes only)
+  for (var j = 0; j < visible.length; j++) visible[j].style.height = '0';
+  // Second pass: read all scrollHeights at once
+  var heights = new Array(visible.length);
+  for (var k = 0; k < visible.length; k++) heights[k] = visible[k].scrollHeight;
+  // Third pass: write final heights
+  for (var m = 0; m < visible.length; m++) visible[m].style.height = heights[m] + 'px';
 }
 
 function toggleSubtaskPanel(header) {
@@ -1999,6 +2459,18 @@ function renderNoteCount(item) {
   return ' <span style="font-size:10px;color:#888;background:#f1f3f4;padding:1px 6px;border-radius:8px">' + item.notes.length + ' note' + (item.notes.length > 1 ? 's' : '') + '</span>';
 }
 
+function renderNotesInline(item) {
+  if (!item.notes || item.notes.length === 0) return '';
+  var notesHtml = item.notes.slice().reverse().map(function(n) {
+    var dateStr = n.timestamp ? new Date(n.timestamp).toLocaleDateString() : (n.date || '');
+    return '<div style="font-size:12px;color:#555;line-height:1.4;padding:4px 8px;border-left:3px solid #fbbc04;background:#fffbea;border-radius:0 4px 4px 0;margin-top:4px;word-break:break-word;white-space:pre-wrap">'
+      + (dateStr ? '<span style="color:#999;font-size:10px;display:block;margin-bottom:2px">' + esc(dateStr) + '</span>' : '')
+      + esc(n.text)
+      + '</div>';
+  }).join('');
+  return notesHtml;
+}
+
 function renderPhotoPreview(photos, containerId, removeCallback) {
   var container = document.getElementById(containerId);
   container.innerHTML = photos.map(function(src, idx) {
@@ -2054,11 +2526,11 @@ function setupPhotoDrop(areaId, inputId) {
   });
 }
 
-// --- Properties ---
+// --- Categories (stored as data.properties for backward compat) ---
 function addProperty() {
   var name = document.getElementById('propName').value.trim();
-  if (!name) return alert('Please enter a property name.');
-  if (data.properties.some(function(p) { return p.name.toLowerCase() === name.toLowerCase(); })) return alert('Property already exists.');
+  if (!name) return alert('Please enter a category name.');
+  if (data.properties.some(function(p) { return p.name.toLowerCase() === name.toLowerCase(); })) return alert('Category already exists.');
   var color = document.getElementById('propColor').value;
   data.properties.push({ id: genId(), name: name, color: color });
   document.getElementById('propName').value = '';
@@ -2069,8 +2541,8 @@ function addProperty() {
 
 function deleteProperty(id) {
   var itemsAtProp = data.items.filter(function(i) { return i.propertyId === id; });
-  if (itemsAtProp.length > 0) return alert('Cannot delete: ' + itemsAtProp.length + ' task(s) are assigned to this property. Reassign them first.');
-  if (!confirm('Delete this property?')) return;
+  if (itemsAtProp.length > 0) return alert('Cannot delete: ' + itemsAtProp.length + ' task(s) are assigned to this category. Reassign them first.');
+  if (!confirm('Delete this category?')) return;
   data.properties = data.properties.filter(function(p) { return p.id !== id; });
   save();
   renderAllDebounced();
@@ -2079,10 +2551,10 @@ function deleteProperty(id) {
 function renameProperty(id) {
   var prop = data.properties.find(function(p) { return p.id === id; });
   if (!prop) return;
-  var newName = prompt('Rename property:', prop.name);
+  var newName = prompt('Rename category:', prop.name);
   if (!newName || newName.trim() === '' || newName.trim() === prop.name) return;
   newName = newName.trim();
-  if (data.properties.some(function(p) { return p.name === newName && p.id !== id; })) return alert('A property with that name already exists.');
+  if (data.properties.some(function(p) { return p.name === newName && p.id !== id; })) return alert('A category with that name already exists.');
   prop.name = newName;
   save();
   renderAllDebounced();
@@ -2099,10 +2571,10 @@ function changePropertyColor(id, newColor) {
 function renderProperties() {
   var el = document.getElementById('propertiesTable');
   if (data.properties.length === 0) {
-    el.innerHTML = '<div class="empty-state"><p>No properties yet</p><small>Add your first property above</small></div>';
+    el.innerHTML = '<div class="empty-state"><p>No categories yet</p><small>Add your first category above</small></div>';
     return;
   }
-  var rows = data.properties.map(function(p) {
+  var rows = getSortedProperties().map(function(p) {
     var count = data.items.filter(function(i) { return i.propertyId === p.id; }).length;
     var done = data.items.filter(function(i) { return i.propertyId === p.id && i.status === 'Done'; }).length;
     var pct = count > 0 ? Math.round((done/count)*100) : 0;
@@ -2114,16 +2586,14 @@ function renderProperties() {
       + '<input type="color" value="' + p.color + '" onchange="changePropertyColor(\'' + p.id + '\', this.value)" title="Change color" style="width:28px;height:28px;padding:1px;border:1px solid #ddd;border-radius:4px;cursor:pointer;vertical-align:middle"> '
       + '<button class="btn btn-danger btn-sm" onclick="deleteProperty(\'' + p.id + '\')">Delete</button></td></tr>';
   }).join('');
-  el.innerHTML = '<table><thead><tr><th>Property</th><th>Tasks</th><th>Progress</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.innerHTML = '<table><thead><tr><th>Category</th><th>Tasks</th><th>Progress</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // --- Tasks (Items) ---
 function addItem() {
   var name = document.getElementById('itemName').value.trim();
-  var category = document.getElementById('itemCategory').value;
   var propertyId = document.getElementById('itemProperty').value;
   var description = document.getElementById('itemDesc').value.trim();
-  var priority = document.getElementById('itemPriority').value;
   var dueDateTimeVal = document.getElementById('itemDueDateTime').value;
   var dueDate = dueDateTimeVal ? dueDateTimeVal.substring(0, 10) : '';
   var dueTime = dueDateTimeVal && dueDateTimeVal.length > 10 ? dueDateTimeVal.substring(11) : '';
@@ -2131,13 +2601,15 @@ function addItem() {
   var allUrls = pendingAddUrls.slice();
   if (lastUrl) allUrls.push(lastUrl);
   var phone = document.getElementById('itemPhone').value.trim();
+  var email = document.getElementById('itemEmail').value.trim();
+  var address = document.getElementById('itemAddress').value.trim();
   var alarm = document.getElementById('itemAlarm').value;
   var notifyEmail = document.getElementById('itemNotifyEmail').checked;
   var notifySms = document.getElementById('itemNotifySms').checked;
   var recurrence = document.getElementById('itemRecurrence').value;
   if (!name) return alert('Please enter a task name.');
-  if (!propertyId) return alert('Please select a property. Add a property first if needed.');
-  var item = { id: genId(), name: name, category: category, propertyId: propertyId, description: description, priority: priority, status: 'To Do', dueDate: dueDate, dueTime: dueTime || '', url: allUrls.length === 1 ? allUrls[0] : '', urls: allUrls, phone: phone || '', alarm: alarm || '', alarmFired: false, notifyEmail: notifyEmail, notifySms: notifySms, recurrence: recurrence || 'none', assignee: '', estimatedCost: 0, actualCost: 0, subtasks: pendingAddSubtasks.slice(), notes: [], photos: pendingAddPhotos.slice(), createdAt: today() };
+  if (!propertyId) return alert('Please select a category. Add a category first if needed.');
+  var item = { id: genId(), name: name, category: '', propertyId: propertyId, description: description, status: 'To Do', dueDate: dueDate, dueTime: dueTime || '', url: allUrls.length === 1 ? allUrls[0] : '', urls: allUrls, phone: phone || '', email: email || '', address: address || '', alarm: alarm || '', alarmFired: false, notifyEmail: notifyEmail, notifySms: notifySms, recurrence: recurrence || 'none', assignee: '', estimatedCost: 0, actualCost: 0, subtasks: pendingAddSubtasks.slice(), notes: [], photos: pendingAddPhotos.slice(), createdAt: today() };
   data.items.push(item);
   data.movements.push({ id: genId(), itemId: item.id, fromId: null, toId: propertyId, date: today(), notes: 'Task created', type: 'created' });
   // Auto-generate future recurring occurrences
@@ -2148,13 +2620,14 @@ function addItem() {
   document.getElementById('itemName').value = '';
   document.getElementById('itemDesc').value = '';
   document.getElementById('itemDueDateTime').value = '';
-  document.getElementById('itemPriority').value = 'Low';
   document.getElementById('itemRecurrence').value = 'none';
   document.getElementById('itemAlarm').value = '';
   document.getElementById('itemUrl').value = '';
   pendingAddUrls = [];
   renderAddUrls();
   document.getElementById('itemPhone').value = '';
+  document.getElementById('itemEmail').value = '';
+  document.getElementById('itemAddress').value = '';
   pendingAddSubtasks = [];
   renderAddSubtasks();
   pendingAddPhotos = [];
@@ -2206,8 +2679,8 @@ function regenerateRecurringTask(item) {
     }
     var newItem = {
       id: genId(), name: item.name, category: item.category, propertyId: item.propertyId,
-      description: item.description, priority: item.priority, status: 'To Do',
-      dueDate: nextDue, dueTime: item.dueTime || '', url: item.url || '', urls: getItemUrls(item).slice(), alarm: nextAlarm, alarmFired: false,
+      description: item.description, status: 'To Do',
+      dueDate: nextDue, dueTime: item.dueTime || '', url: item.url || '', urls: getItemUrls(item).slice(), phone: item.phone || '', email: item.email || '', address: item.address || '', alarm: nextAlarm, alarmFired: false,
       notifyEmail: item.notifyEmail !== false, notifySms: item.notifySms === true,
       recurrence: item.recurrence, subtasks: [], notes: [], photos: (item.photos || []).slice(), createdAt: today()
     };
@@ -2289,8 +2762,9 @@ function generateRecurringBatch(sourceItem) {
     }
     var newItem = {
       id: genId() + n, name: sourceItem.name, category: sourceItem.category, propertyId: sourceItem.propertyId,
-      description: sourceItem.description, priority: sourceItem.priority, status: 'To Do',
+      description: sourceItem.description, status: 'To Do',
       dueDate: dateStr, dueTime: sourceItem.dueTime || '', url: sourceItem.url || '', urls: getItemUrls(sourceItem).slice(),
+      email: sourceItem.email || '',
       alarm: nextAlarm, alarmFired: false,
       notifyEmail: sourceItem.notifyEmail !== false, notifySms: sourceItem.notifySms === true,
       recurrence: rec, subtasks: [], notes: [], photos: (sourceItem.photos || []).slice(), createdAt: today()
@@ -2341,16 +2815,9 @@ function openEditModal(itemId) {
   if (!item) return;
   document.getElementById('editName').value = item.name;
   document.getElementById('editStatus').value = item.status;
-  document.getElementById('editPriority').value = item.priority;
-  // Rebuild category options fresh each time the modal opens
-  var cats = data.categories || ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
-  var editCatEl = document.getElementById('editCategory');
-  editCatEl.innerHTML = cats.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') + '<option value="__add_new__">+ Add new category...</option>';
-  editCatEl.onchange = function() { handleNewCategorySelect(editCatEl); };
-  editCatEl.value = item.category;
-  // Populate property dropdown in edit modal
+  // Populate category dropdown (formerly property) in edit modal
   var editPropEl = document.getElementById('editProperty');
-  editPropEl.innerHTML = data.properties.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="__add_new_prop__">+ Add new property...</option>';
+  editPropEl.innerHTML = getSortedProperties().map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="__add_new_prop__">+ Add new category...</option>';
   editPropEl.value = item.propertyId;
   editPropEl.onchange = function() { handleNewPropertySelect(editPropEl); };
   var editDtVal = item.dueDate ? (item.dueDate + 'T' + (item.dueTime || '00:00')) : '';
@@ -2361,6 +2828,8 @@ function openEditModal(itemId) {
   pendingEditUrls = getItemUrls(item).slice();
   renderEditUrls();
   document.getElementById('editPhone').value = item.phone || '';
+  document.getElementById('editEmail').value = item.email || '';
+  document.getElementById('editAddress').value = item.address || '';
   document.getElementById('editAlarm').value = item.alarm || '';
   document.getElementById('editNotifyEmail').checked = item.notifyEmail !== false;
   document.getElementById('editNotifySms').checked = item.notifySms === true;
@@ -2389,8 +2858,6 @@ function saveEdit() {
   var changes = [];
   var newName = document.getElementById('editName').value.trim();
   var newStatus = document.getElementById('editStatus').value;
-  var newPriority = document.getElementById('editPriority').value;
-  var newCategory = document.getElementById('editCategory').value;
   var editDtVal = document.getElementById('editDueDateTime').value;
   var newDueDate = editDtVal ? editDtVal.substring(0, 10) : '';
   var newDueTime = editDtVal && editDtVal.length > 10 ? editDtVal.substring(11) : '';
@@ -2399,6 +2866,8 @@ function saveEdit() {
   var newUrls = pendingEditUrls.slice();
   if (lastEditUrl) newUrls.push(lastEditUrl);
   var newPhone = document.getElementById('editPhone').value.trim();
+  var newEmail = document.getElementById('editEmail').value.trim();
+  var newAddress = document.getElementById('editAddress').value.trim();
   var newAlarm = document.getElementById('editAlarm').value;
   var newNotifyEmail = document.getElementById('editNotifyEmail').checked;
   var newNotifySms = document.getElementById('editNotifySms').checked;
@@ -2407,25 +2876,23 @@ function saveEdit() {
   var oldPropertyId = item.propertyId;
   if (newName && newName !== item.name) changes.push('Renamed');
   if (newStatus !== item.status) changes.push('Status: ' + item.status + ' -> ' + newStatus);
-  if (newPriority !== item.priority) changes.push('Priority: ' + item.priority + ' -> ' + newPriority);
-  if (newCategory !== item.category) changes.push('Category changed');
   if (newPropertyId !== item.propertyId) {
     var oldProp = getProperty(item.propertyId);
     var newProp = getProperty(newPropertyId);
-    changes.push('Property: ' + (oldProp ? oldProp.name : '?') + ' -> ' + (newProp ? newProp.name : '?'));
+    changes.push('Category: ' + (oldProp ? oldProp.name : '?') + ' -> ' + (newProp ? newProp.name : '?'));
   }
   if (newDueDate !== (item.dueDate||'')) changes.push('Due date updated');
   if (newDueTime !== (item.dueTime||'')) changes.push('Due time updated');
   var oldUrls = getItemUrls(item);
   if (JSON.stringify(newUrls) !== JSON.stringify(oldUrls)) changes.push('URLs updated');
   if (newPhone !== (item.phone||'')) changes.push('Phone updated');
+  if (newEmail !== (item.email||'')) changes.push('Email updated');
+  if (newAddress !== (item.address||'')) changes.push('Address updated');
   if (newAlarm !== (item.alarm||'')) changes.push('Alarm updated');
   var oldPhotoCount = (item.photos||[]).length;
   if (pendingEditPhotos.length !== oldPhotoCount) changes.push('Photos updated');
   item.name = newName || item.name;
   item.status = newStatus;
-  item.priority = newPriority;
-  item.category = newCategory;
   item.propertyId = newPropertyId;
   item.dueDate = newDueDate;
   item.dueTime = newDueTime || '';
@@ -2433,6 +2900,8 @@ function saveEdit() {
   item.url = newUrls.length === 1 ? newUrls[0] : (newUrls.length > 0 ? newUrls[0] : '');
   item.urls = newUrls;
   item.phone = newPhone;
+  item.email = newEmail;
+  item.address = newAddress;
   if (newAlarm !== (item.alarm||'')) { item.alarm = newAlarm || ''; item.alarmFired = false; }
   item.notifyEmail = newNotifyEmail;
   item.notifySms = newNotifySms;
@@ -2455,7 +2924,7 @@ function openMoveModal(itemId) {
   var fromProp = getProperty(item.propertyId);
   document.getElementById('modalFrom').value = fromProp ? fromProp.name : 'Unassigned';
   var sel = document.getElementById('modalTo');
-  sel.innerHTML = data.properties.filter(function(p) { return p.id !== item.propertyId; }).map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('');
+  sel.innerHTML = getSortedProperties().filter(function(p) { return p.id !== item.propertyId; }).map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('');
   document.getElementById('modalDate').value = today();
   document.getElementById('modalNotes').value = '';
   document.getElementById('moveModal').classList.add('active');
@@ -2472,7 +2941,7 @@ function confirmModalMove() {
   var toId = document.getElementById('modalTo').value;
   var date = document.getElementById('modalDate').value || today();
   var notes = document.getElementById('modalNotes').value.trim();
-  if (!toId) return alert('Select a destination property.');
+  if (!toId) return alert('Select a destination category.');
   data.movements.push({ id: genId(), itemId: itemId, fromId: item.propertyId, toId: toId, date: date, notes: notes || 'Reassigned', type: 'move' });
   item.propertyId = toId;
   save();
@@ -2481,13 +2950,17 @@ function confirmModalMove() {
 }
 
 function renderItems() {
-  // Refresh category dropdown for add form
-  var cats = data.categories || ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
-  var addCatEl = document.getElementById('itemCategory');
-  var prevCat = addCatEl.value;
-  addCatEl.innerHTML = cats.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') + '<option value="__add_new__">+ Add new category...</option>';
-  addCatEl.onchange = function() { handleNewCategorySelect(addCatEl); };
-  if (prevCat && prevCat !== '__add_new__') addCatEl.value = prevCat;
+  // Defer re-render while the user is editing an inline due-date input — destroying
+  // the input mid-interaction loses the user's pending change.
+  if (_activeDueInputId) {
+    var activeEl = document.activeElement;
+    if (activeEl && activeEl.classList && activeEl.classList.contains('inline-due-date') && activeEl.getAttribute('data-id') === _activeDueInputId) {
+      if (_renderTimer) clearTimeout(_renderTimer);
+      _renderTimer = setTimeout(function() { _renderTimer = null; renderItems(); }, 300);
+      return;
+    }
+    _activeDueInputId = null;
+  }
 
   var search = document.getElementById('itemSearch').value.toLowerCase();
   var propFilter = document.getElementById('filterProperty').value;
@@ -2508,9 +2981,6 @@ function renderItems() {
   // Done/completed items always go to the bottom
   function isDone(item) { return item.status === 'Done' ? 1 : 0; }
 
-  var PRIO_ORDER = { 'High': 0, 'Medium': 1, 'Low': 2 };
-  function getPrio(item) { return PRIO_ORDER[item.priority] !== undefined ? PRIO_ORDER[item.priority] : 1; }
-
   if (sortOrder === 'date-time') {
     items.sort(function(a, b) {
       var doneA = isDone(a), doneB = isDone(b);
@@ -2522,37 +2992,19 @@ function renderItems() {
       var tb = b.dueTime || '99:99';
       return ta < tb ? -1 : ta > tb ? 1 : 0;
     });
-  } else if (sortOrder === 'date-property-priority') {
+  } else if (sortOrder === 'date-property') {
     items.sort(function(a, b) {
       var doneA = isDone(a), doneB = isDone(b);
       if (doneA !== doneB) return doneA - doneB;
       var da = a.dueDate || '9999-12-31';
       var db = b.dueDate || '9999-12-31';
       if (da !== db) return da < db ? -1 : 1;
-      var pn = getPropName(a.propertyId).localeCompare(getPropName(b.propertyId));
-      if (pn !== 0) return pn;
-      return getPrio(a) - getPrio(b);
+      return getPropName(a.propertyId).localeCompare(getPropName(b.propertyId));
     });
   } else if (sortOrder === 'date') {
     items.sort(function(a, b) {
       var doneA = isDone(a), doneB = isDone(b);
       if (doneA !== doneB) return doneA - doneB;
-      var da = a.dueDate || '9999-12-31';
-      var db = b.dueDate || '9999-12-31';
-      return da < db ? -1 : da > db ? 1 : 0;
-    });
-  } else if (sortOrder === 'priority') {
-    items.sort(function(a, b) {
-      var doneA = isDone(a), doneB = isDone(b);
-      if (doneA !== doneB) return doneA - doneB;
-      return getPrio(a) - getPrio(b);
-    });
-  } else if (sortOrder === 'priority-date') {
-    items.sort(function(a, b) {
-      var doneA = isDone(a), doneB = isDone(b);
-      if (doneA !== doneB) return doneA - doneB;
-      var pd = getPrio(a) - getPrio(b);
-      if (pd !== 0) return pd;
       var da = a.dueDate || '9999-12-31';
       var db = b.dueDate || '9999-12-31';
       return da < db ? -1 : da > db ? 1 : 0;
@@ -2575,15 +3027,63 @@ function renderItems() {
     return;
   }
 
-  var lastPropGroup = '';
-  var rows = items.map(function(i) {
+  var isMobile = _isMobileViewport;
+  var ctx = { lastPropGroup: '' };
+  var FIRST = 60, CHUNK = 40;
+
+  if (items.length <= FIRST) {
+    var html = _buildRowsHtml(items, 0, items.length, isMobile, propFilter, sortOrder, ctx);
+    el.innerHTML = isMobile
+      ? '<div>' + html + '</div>'
+      : '<table class="task-desktop-table"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllBulk(this)"></th><th>Task</th><th>Due Date</th><th style="width:30px">Done</th><th>Actions</th><th>Category</th></tr></thead><tbody>' + html + '</tbody></table>';
+    setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
+    attachPendingPhotos();
+    return;
+  }
+
+  // Chunked render — first batch shows immediately (so the user sees the
+  // table without waiting), the rest stream in across animation frames.
+  // 500+ items × per-row HTML used to block the main thread for seconds on
+  // every change; this caps each frame at one CHUNK-sized DOM update.
+  var token = ++_renderItemsToken;
+  var firstHtml = _buildRowsHtml(items, 0, FIRST, isMobile, propFilter, sortOrder, ctx);
+  el.innerHTML = isMobile
+    ? '<div>' + firstHtml + '</div>'
+    : '<table class="task-desktop-table"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllBulk(this)"></th><th>Task</th><th>Due Date</th><th style="width:30px">Done</th><th>Actions</th><th>Category</th></tr></thead><tbody>' + firstHtml + '</tbody></table>';
+  attachPendingPhotos();
+  var target = isMobile ? el.firstChild : el.querySelector('tbody');
+  var idx = FIRST;
+  function renderNext() {
+    if (token !== _renderItemsToken) return; // a newer render started — abandon
+    if (idx >= items.length) {
+      autoSizeAllSubtasks(el);
+      return;
+    }
+    var end = Math.min(idx + CHUNK, items.length);
+    var chunkHtml = _buildRowsHtml(items, idx, end, isMobile, propFilter, sortOrder, ctx);
+    if (target) target.insertAdjacentHTML('beforeend', chunkHtml);
+    idx = end;
+    attachPendingPhotos();
+    requestAnimationFrame(renderNext);
+  }
+  requestAnimationFrame(renderNext);
+}
+
+var _renderItemsToken = 0;
+function _buildRowsHtml(items, start, end, isMobile, propFilter, sortOrder, ctx) {
+  var parts = [];
+  for (var k = start; k < end; k++) {
+    var i = items[k];
     var groupHeader = '';
     if (!propFilter && sortOrder === 'property') {
-      var pName = getProperty(i.propertyId) ? getProperty(i.propertyId).name : 'Unassigned';
-      if (pName !== lastPropGroup) {
-        lastPropGroup = pName;
-        var pColor = getProperty(i.propertyId) ? getProperty(i.propertyId).color : '#999';
-        groupHeader = '<tr><td colspan="5" style="background:#f0f2f5;padding:10px 12px;font-weight:700;font-size:14px;border-bottom:2px solid ' + pColor + '"><span class="property-color" style="background:' + pColor + '"></span>' + esc(pName) + '</td></tr>';
+      var gp = getProperty(i.propertyId);
+      var pName = gp ? gp.name : 'Unassigned';
+      if (pName !== ctx.lastPropGroup) {
+        ctx.lastPropGroup = pName;
+        var pColor = gp ? gp.color : '#999';
+        groupHeader = isMobile
+          ? '<div style="background:#f0f2f5;padding:10px 12px;font-weight:700;font-size:14px;border-bottom:2px solid ' + pColor + ';margin-top:8px"><span class="property-color" style="background:' + pColor + '"></span>' + esc(pName) + '</div>'
+          : '<tr><td colspan="6" style="background:#f0f2f5;padding:10px 12px;font-weight:700;font-size:14px;border-bottom:2px solid ' + pColor + '"><span class="property-color" style="background:' + pColor + '"></span>' + esc(pName) + '</td></tr>';
       }
     }
     var dtVal = i.dueDate ? (i.dueDate + 'T' + (i.dueTime || '00:00')) : '';
@@ -2591,10 +3091,43 @@ function renderItems() {
     var dueCls = i.status === 'Done' ? '' : ds;
     var dueColor = dueCls === 'overdue' ? '#d93025' : dueCls === 'due-soon' ? '#f9ab00' : '#888';
     var dayOfWeek = i.dueDate ? new Date(i.dueDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' }) : '';
-    var dueLabel = (dayOfWeek ? '<span style="font-size:12px;font-weight:600;color:' + dueColor + '">' + dayOfWeek + '</span> ' : '') + '<input type="datetime-local" class="inline-due-date" value="' + dtVal + '" data-id="' + i.id + '" onchange="inlineChangeDate(this)" style="color:' + dueColor + '">';
-    var propColor = getProperty(i.propertyId) ? getProperty(i.propertyId).color : '#1a1a2e';
-    var propName = getProperty(i.propertyId) ? getProperty(i.propertyId).name : '';
-    // Desktop: table row
+    var prop = getProperty(i.propertyId);
+    var propColor = prop ? prop.color : '#1a1a2e';
+    var propName = prop ? prop.name : '';
+
+    if (isMobile) {
+      var dueDateDisplay = i.dueDate ? (dayOfWeek + ' ' + formatDate(i.dueDate) + (i.dueTime && i.dueTime !== '00:00' ? ' ' + formatTime(i.dueTime) : '')) : 'No date';
+      var mobileCard = '<div class="task-mobile-card">'
+        + '<div class="tmc-top">'
+        + '<input type="checkbox" class="done-check" data-id="' + i.id + '"' + (i.status === 'Done' ? ' checked' : '') + ' onchange="inlineToggleDone(this)" style="width:20px;height:20px;flex-shrink:0">'
+        + '<span class="tmc-name ' + (STATUS_CLASSES[i.status]||'') + '" style="color:#000" onclick="openEditModal(\'' + i.id + '\')">' + esc(i.name) + '</span>'
+        + '</div>'
+        + renderSubtaskBadge(i)
+        + (i.description ? '<div style="margin:4px 0;font-size:13px;color:#888;line-height:1.4;word-break:break-word;white-space:pre-wrap">' + esc(i.description) + '</div>' : '')
+        + renderNotesInline(i)
+        + '<div class="tmc-due" style="color:' + dueColor + '">' + dueDateDisplay + '</div>'
+        + '<div class="tmc-meta">'
+        + '<span class="badge" style="background:' + propColor + '15;color:' + propColor + ';font-size:11px">' + esc(propName) + '</span>'
+        + (i.recurrence && i.recurrence !== 'none' ? ' <span class="badge badge-purple" style="font-size:10px">' + i.recurrence + '</span>' : '')
+        + renderNoteCount(i)
+        + '</div>'
+        + renderAlarm(i)
+        + renderInlineUrlSection(i)
+        + (i.phone ? '<a href="tel:' + esc(i.phone) + '" class="task-phone-link">' + esc(i.phone) + '</a>' : '')
+        + (i.email ? '<a href="mailto:' + esc(i.email) + '" class="task-email-link">' + esc(i.email) + '</a>' : '')
+        + (i.address ? '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(i.address) + '" target="_blank" rel="noopener" class="task-address-link" title="Driving directions">' + esc(i.address) + '</a>' : '')
+        + renderPhotos(i.photos, i.id)
+        + '<div class="tmc-actions">'
+        + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')">Edit</button>'
+        + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled' : '') + '>Move</button>'
+        + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
+        + '</div>'
+        + '</div>';
+      parts.push(groupHeader + mobileCard);
+      continue;
+    }
+
+    var dueLabel = '<span class="inline-due-day" style="font-size:12px;font-weight:600;color:' + dueColor + '">' + dayOfWeek + '</span> ' + '<input type="datetime-local" class="inline-due-date" value="' + dtVal + '" data-id="' + i.id + '" onfocus="inlineDueFocus(this)" onchange="inlineChangeDate(this)" onblur="inlineChangeDate(this,true)" style="color:' + dueColor + '">';
     var desktopRow = '<tr class="task-desktop-row">'
       + '<td style="width:30px"><input type="checkbox" class="bulk-check" data-id="' + i.id + '" onchange="updateBulkBar()"></td>'
       + '<td><input type="text" value="' + esc(i.name).replace(/"/g, '&quot;') + '" class="inline-task-name ' + (STATUS_CLASSES[i.status]||'') + '" style="color:#000" data-id="' + i.id + '" onchange="inlineRenameTask(this)" onkeydown="if(event.key===\'Enter\')this.blur()">'
@@ -2602,49 +3135,26 @@ function renderItems() {
       + renderNoteCount(i)
       + renderSubtaskBadge(i)
       + (i.description ? '<br><span class="task-desc-toggle" onclick="toggleDesc(this)" title="Click to expand">' + esc(i.description) + '</span>' : '')
+      + renderNotesInline(i)
       + renderAlarm(i)
       + renderInlineUrlSection(i)
       + (i.phone ? '<br><a href="tel:' + esc(i.phone) + '" class="task-phone-link">' + esc(i.phone) + '</a>' : '')
-      + renderPhotos(i.photos)
+      + (i.email ? '<br><a href="mailto:' + esc(i.email) + '" class="task-email-link">' + esc(i.email) + '</a>' : '')
+      + (i.address ? '<br><a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(i.address) + '" target="_blank" rel="noopener" class="task-address-link" title="Driving directions">' + esc(i.address) + '</a>' : '')
+      + renderPhotos(i.photos, i.id)
       + '</td>'
       + '<td>' + dueLabel + '</td>'
       + '<td style="width:30px;text-align:center"><input type="checkbox" class="done-check" data-id="' + i.id + '"' + (i.status === 'Done' ? ' checked' : '') + ' onchange="inlineToggleDone(this)" title="Mark as completed"></td>'
       + '<td>'
       + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')" title="Edit">Edit</button> '
-      + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled title="Need 2+ properties"' : ' title="Reassign"') + '>Move</button> '
+      + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled title="Need 2+ categories"' : ' title="Reassign"') + '>Move</button> '
       + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
       + '</td>'
       + '<td>' + buildInlinePropSelect(i) + '</td>'
       + '</tr>';
-    // Mobile: card
-    var dueDateDisplay = i.dueDate ? (dayOfWeek + ' ' + formatDate(i.dueDate) + (i.dueTime && i.dueTime !== '00:00' ? ' ' + formatTime(i.dueTime) : '')) : 'No date';
-    var mobileCard = '<div class="task-mobile-card priority-' + (i.priority||'medium').toLowerCase() + '">'
-      + '<div class="tmc-top">'
-      + '<input type="checkbox" class="done-check" data-id="' + i.id + '"' + (i.status === 'Done' ? ' checked' : '') + ' onchange="inlineToggleDone(this)" style="width:20px;height:20px;flex-shrink:0">'
-      + '<span class="tmc-name ' + (STATUS_CLASSES[i.status]||'') + '" style="color:#000" onclick="openEditModal(\'' + i.id + '\')">' + esc(i.name) + '</span>'
-      + '</div>'
-      + renderSubtaskBadge(i)
-      + (i.description ? '<div style="margin:4px 0;font-size:13px;color:#888;line-height:1.4;word-break:break-word">' + esc(i.description) + '</div>' : '')
-      + '<div class="tmc-due" style="color:' + dueColor + '">' + dueDateDisplay + '</div>'
-      + '<div class="tmc-meta">'
-      + '<span class="badge" style="background:' + propColor + '15;color:' + propColor + ';font-size:11px">' + esc(propName) + '</span>'
-      + (i.recurrence && i.recurrence !== 'none' ? ' <span class="badge badge-purple" style="font-size:10px">' + i.recurrence + '</span>' : '')
-      + renderNoteCount(i)
-      + '</div>'
-      + renderAlarm(i)
-      + renderInlineUrlSection(i)
-      + (i.phone ? '<a href="tel:' + esc(i.phone) + '" class="task-phone-link">' + esc(i.phone) + '</a>' : '')
-      + renderPhotos(i.photos)
-      + '<div class="tmc-actions">'
-      + '<button class="btn btn-outline btn-sm" onclick="openEditModal(\'' + i.id + '\')">Edit</button>'
-      + '<button class="btn btn-outline btn-sm" onclick="openMoveModal(\'' + i.id + '\')"' + (data.properties.length < 2 ? ' disabled' : '') + '>Move</button>'
-      + '<button class="btn btn-sm" style="background:none;color:#ccc;font-size:11px;padding:4px 6px;min-height:auto;min-width:auto" onclick="deleteItem(\'' + i.id + '\')">Del</button>'
-      + '</div>'
-      + '</div>';
-    return groupHeader + desktopRow + mobileCard;
-  }).join('');
-  el.innerHTML = '<table class="task-desktop-table"><thead><tr><th style="width:30px"><input type="checkbox" onchange="toggleAllBulk(this)"></th><th>Task</th><th>Due Date</th><th style="width:30px">Done</th><th>Actions</th><th>Property</th></tr></thead><tbody>' + rows + '</tbody></table>';
-  setTimeout(function() { autoSizeAllSubtasks(el); }, 0);
+    parts.push(groupHeader + desktopRow);
+  }
+  return parts.join('');
 }
 
 // --- Bulk Actions ---
@@ -2704,8 +3214,11 @@ function renderKanban() {
   var html = '';
   statuses.forEach(function(status) {
     var tasks = data.items.filter(function(i) { return i.status === status; });
-    var prioOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
-    tasks.sort(function(a,b) { return (prioOrder[a.priority]||1) - (prioOrder[b.priority]||1); });
+    tasks.sort(function(a,b) {
+      var da = a.dueDate || '9999-12-31';
+      var db = b.dueDate || '9999-12-31';
+      return da < db ? -1 : da > db ? 1 : 0;
+    });
     html += '<div class="kanban-col"><h3>' + status + ' <span>' + tasks.length + '</span></h3>';
     if (tasks.length === 0) {
       html += '<div style="text-align:center;color:#bbb;font-size:13px;padding:20px">No tasks</div>';
@@ -2713,11 +3226,12 @@ function renderKanban() {
     tasks.forEach(function(t) {
       var ds = dueStatus(t.dueDate);
       var dueCls = t.status === 'Done' ? '' : ds;
-      html += '<div class="kanban-card priority-' + t.priority.toLowerCase() + '" onclick="openEditModal(\'' + t.id + '\')">'
+      html += '<div class="kanban-card" onclick="openEditModal(\'' + t.id + '\')">'
         + '<div class="kc-title">' + esc(t.name) + '</div>'
+        + (t.description ? '<div style="font-size:12px;color:#888;line-height:1.4;margin:4px 0;word-break:break-word;white-space:pre-wrap">' + esc(t.description) + '</div>' : '')
+        + renderNotesInline(t)
         + '<div class="kc-meta">'
         + propBadge(t.propertyId)
-        + '<span class="badge ' + (PRIORITY_BADGES[t.priority]||'badge-gray') + '">' + t.priority + '</span>'
         + (t.dueDate ? '<span class="task-due ' + dueCls + '">' + formatDate(t.dueDate) + '</span>' : '')
         + (getItemUrls(t).length > 0 ? '<span class="task-url"><a href="' + esc(getItemUrls(t)[0]) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + getItemUrls(t).length + ' Link' + (getItemUrls(t).length > 1 ? 's' : '') + '</a></span>' : '')
         + (t.photos && t.photos.length ? '<span style="color:#888">' + t.photos.length + ' photo' + (t.photos.length>1?'s':'') + '</span>' : '')
@@ -2738,7 +3252,7 @@ function recordMovement() {
   if (!toId) return alert('Select a destination.');
   var item = getItem(itemId);
   if (!item) return;
-  if (item.propertyId === toId) return alert('Task is already at that property.');
+  if (item.propertyId === toId) return alert('Task is already in that category.');
   data.movements.push({ id: genId(), itemId: itemId, fromId: item.propertyId, toId: toId, date: date, notes: notes || 'Reassigned', type: 'move' });
   item.propertyId = toId;
   document.getElementById('moveNotes').value = '';
@@ -2785,19 +3299,19 @@ function renderMovements() {
       + '<td>' + movement + '</td>'
       + '<td style="color:#888;font-size:13px">' + (m.notes ? esc(m.notes) : '') + '</td></tr>';
   }).join('');
-  el.innerHTML = '<table><thead><tr><th>Date</th><th>Type</th><th>Task</th><th>Property</th><th>Notes</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.innerHTML = '<table><thead><tr><th>Date</th><th>Type</th><th>Task</th><th>Category</th><th>Notes</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // --- Dashboard ---
 function renderDashboard() {
   var el = document.getElementById('dashboardContent');
   if (data.properties.length === 0) {
-    el.innerHTML = '<div class="empty-state"><p>Get started by adding properties</p><small>Go to the Properties tab to add your first property</small></div>';
+    el.innerHTML = '<div class="empty-state"><p>Get started by adding categories</p><small>Use the Add New Task form to create your first category</small></div>';
     return;
   }
 
   var html = '';
-  data.properties.forEach(function(p) {
+  getSortedProperties().forEach(function(p) {
     var tasks = data.items.filter(function(i) { return i.propertyId === p.id; });
     var done = tasks.filter(function(t) { return t.status === 'Done'; }).length;
     var pct = tasks.length > 0 ? Math.round((done/tasks.length)*100) : 0;
@@ -2806,7 +3320,7 @@ function renderDashboard() {
       + ' <span style="color:#888;font-weight:400">(' + tasks.length + ' tasks, ' + pct + '% complete)</span></h3>';
 
     if (tasks.length === 0) {
-      html += '<p style="color:#aaa;font-size:13px;padding-left:20px">No tasks at this property</p>';
+      html += '<p style="color:#aaa;font-size:13px;padding-left:20px">No tasks in this category</p>';
     } else {
       // Sort by due date then time, done/completed items to bottom
       tasks.sort(function(a,b) {
@@ -2827,10 +3341,11 @@ function renderDashboard() {
         var dueCls = t.status === 'Done' ? '' : ds;
         html += '<tr>'
           + '<td>' + esc(t.name)
-          + (t.description ? '<br><small style="color:#888">' + esc(t.description) + '</small>' : '')
+          + (t.description ? '<br><small style="color:#888;white-space:pre-wrap">' + esc(t.description) + '</small>' : '')
+          + renderNotesInline(t)
           + renderAlarm(t)
           + renderInlineUrlSection(t)
-          + renderPhotos(t.photos)
+          + renderPhotos(t.photos, t.id)
           + '</td>'
           + '<td>' + (t.dueDate ? '<span class="task-due ' + dueCls + '">' + formatDate(t.dueDate) + (t.dueTime ? ' ' + formatTime(t.dueTime) : '') + (dueCls==='overdue' ? ' (overdue)' : dueCls==='due-soon' ? ' (soon)' : '') + '</span>' : '<span style="color:#ccc">--</span>') + '</td></tr>';
       });
@@ -2839,62 +3354,57 @@ function renderDashboard() {
     html += '</div>';
   });
   el.innerHTML = html;
+  attachPendingPhotos();
 }
 
 function renderStats() {
   var el = document.getElementById('stats');
-  var todo = data.items.filter(function(i) { return i.status === 'To Do'; }).length;
-  var inProg = data.items.filter(function(i) { return i.status === 'In Progress'; }).length;
-  var done = data.items.filter(function(i) { return i.status === 'Done'; }).length;
-  var overdue = data.items.filter(function(i) { return i.status !== 'Done' && dueStatus(i.dueDate) === 'overdue'; }).length;
   var totalCost = data.items.reduce(function(s, i) { return s + (i.actualCost || i.estimatedCost || 0); }, 0);
-  el.innerHTML = '<div class="stat-card"><div class="stat-value">' + data.properties.length + '</div><div class="stat-label">Properties</div></div>'
-    + '<div class="stat-card"><div class="stat-value">' + todo + '</div><div class="stat-label">To Do</div></div>'
-    + '<div class="stat-card"><div class="stat-value">' + inProg + '</div><div class="stat-label">In Progress</div></div>'
-    + '<div class="stat-card"><div class="stat-value">' + done + '</div><div class="stat-label">Done</div></div>'
-    + (overdue > 0 ? '<div class="stat-card" style="border-left:3px solid #d93025"><div class="stat-value" style="color:#d93025">' + overdue + '</div><div class="stat-label">Overdue</div></div>' : '')
-    + (totalCost > 0 ? '<div class="stat-card"><div class="stat-value">$' + totalCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}) + '</div><div class="stat-label">Total Cost</div></div>' : '');
+  el.innerHTML = (totalCost > 0 ? '<div class="stat-card"><div class="stat-value">$' + totalCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}) + '</div><div class="stat-label">Total Cost</div></div>' : '');
 }
 
 // --- Dropdowns ---
 function populateDropdowns() {
-  var propOptions = data.properties.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('');
+  var propOptions = getSortedProperties().map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('');
 
-  var cats = data.categories || ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
-  var catOptions = cats.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') + '<option value="__add_new__">+ Add new category...</option>';
-  var itemCatEl = document.getElementById('itemCategory');
-  var editCatEl = document.getElementById('editCategory');
-  var prevItemCat = itemCatEl.value;
-  var prevEditCat = editCatEl.value;
-  itemCatEl.innerHTML = catOptions;
-  editCatEl.innerHTML = catOptions;
-  if (prevItemCat && prevItemCat !== '__add_new__') itemCatEl.value = prevItemCat;
-  else { var compOpt = cats.find(function(c) { return c.toLowerCase() === 'compute'; }); if (compOpt) itemCatEl.value = compOpt; }
-  if (prevEditCat && prevEditCat !== '__add_new__') editCatEl.value = prevEditCat;
-  // Handle "Add new category" from dropdown
-  itemCatEl.onchange = function() { handleNewCategorySelect(itemCatEl); };
-  editCatEl.onchange = function() { handleNewCategorySelect(editCatEl); };
-
-  var propOptionsWithAdd = propOptions + '<option value="__add_new_prop__">+ Add new property...</option>';
+  var propOptionsWithAdd = propOptions + '<option value="__add_new_prop__">+ Add new category...</option>';
 
   var itemPropEl = document.getElementById('itemProperty');
   var prevItemProp = itemPropEl.value;
-  itemPropEl.innerHTML = (data.properties.length ? '' : '<option value="">-- Add a property first --</option>') + propOptionsWithAdd;
+  itemPropEl.innerHTML = (data.properties.length ? '' : '<option value="">-- Add a category first --</option>') + propOptionsWithAdd;
   if (prevItemProp && prevItemProp !== '__add_new_prop__') { itemPropEl.value = prevItemProp; }
   else { var defProp = data.properties.find(function(p) { return p.name === '42-l' || p.name === '42-L'; }); if (defProp) itemPropEl.value = defProp.id; }
   itemPropEl.onchange = function() { handleNewPropertySelect(itemPropEl); };
-  document.getElementById('filterProperty').innerHTML = '<option value="">All Properties</option>' + propOptions;
+  document.getElementById('filterProperty').innerHTML = '<option value="">All Categories</option>' + propOptions;
   document.getElementById('moveTo').innerHTML = propOptions;
-  document.getElementById('filterMoveProperty').innerHTML = '<option value="">All Properties</option>' + propOptions;
+  document.getElementById('filterMoveProperty').innerHTML = '<option value="">All Categories</option>' + propOptions;
   document.getElementById('modalTo').innerHTML = propOptions;
 
+  // moveItem dropdown (in the Activity Log tab) holds an <option> per task —
+  // for 500+ items that's a lot of string-building per render. Defer it: keep
+  // a placeholder and only build the full list when the user opens the
+  // Activity Log tab or clicks into the select.
+  var moveItemEl = document.getElementById('moveItem');
+  if (!data.items.length) {
+    moveItemEl.innerHTML = '<option value="">-- Add tasks first --</option>';
+  } else if (_activeTab === 'movements' || moveItemEl.dataset.populated === '1') {
+    _populateMoveItem();
+  } else {
+    moveItemEl.innerHTML = '<option value="">-- click to load tasks --</option>';
+    moveItemEl.onfocus = _populateMoveItem;
+  }
+
+  document.getElementById('moveDate').value = today();
+}
+
+function _populateMoveItem() {
+  var el = document.getElementById('moveItem');
   var itemOptions = data.items.map(function(i) {
     var p = getProperty(i.propertyId);
     return '<option value="' + i.id + '">' + esc(i.name) + (p ? ' (' + esc(p.name) + ')' : '') + '</option>';
   }).join('');
-  document.getElementById('moveItem').innerHTML = (data.items.length ? '' : '<option value="">-- Add tasks first --</option>') + itemOptions;
-
-  document.getElementById('moveDate').value = today();
+  el.innerHTML = itemOptions || '<option value="">-- Add tasks first --</option>';
+  el.dataset.populated = '1';
 }
 
 // --- Tabs ---
@@ -2911,6 +3421,9 @@ function switchTab(name) {
     _dirtyTabs[name] = false;
     _renderTab(name);
   }
+  // The Activity Log tab uses the heavy moveItem dropdown (one <option> per
+  // task). Populate it when the user actually opens the tab.
+  if (name === 'movements' && data.items.length) _populateMoveItem();
 }
 
 function _renderTab(name) {
@@ -2948,7 +3461,6 @@ function importData(event) {
       // Ensure fields exist
       data.items.forEach(function(item) {
         if (!item.status) item.status = 'To Do';
-        if (!item.priority) item.priority = 'Medium';
         if (!item.dueDate) item.dueDate = '';
         if (!item.dueTime) item.dueTime = '';
         if (!item.url) item.url = '';
@@ -2978,7 +3490,6 @@ function importData(event) {
 function renderAll(forceAll) {
   populateDropdowns();
   renderProperties();
-  renderCategories();
 
   if (forceAll) {
     // Full render on initial load or import
@@ -2999,15 +3510,17 @@ function renderAll(forceAll) {
     _dirtyTabs.movements = true;
     _dirtyTabs[_activeTab] = false;
     _renderTab(_activeTab);
+    // All Tasks card lives outside the tab panels — always refresh it
+    if (_activeTab !== 'tasks') { renderItems(); _dirtyTabs.tasks = false; }
     // Kanban is part of dashboard
     if (_activeTab === 'dashboard') renderKanban();
     else _dirtyTabs.dashboard = true;
   }
 
-  // Populate report property dropdown
+  // Populate report category dropdown
   var rp = document.getElementById('reportProperty');
   var rpVal = rp.value;
-  rp.innerHTML = '<option value="">-- Select Property --</option>' + data.properties.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('');
+  rp.innerHTML = '<option value="">-- Select Category --</option>' + getSortedProperties().map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('');
   if (rpVal) rp.value = rpVal;
   if (rpVal) renderReport();
   setDefaultDueDateTime();
@@ -3040,12 +3553,12 @@ function syncAlarmToDue() {
   }
 }
 
-// --- Categories Management ---
+// --- Category Management ---
 function handleNewPropertySelect(selectEl) {
   if (selectEl.value !== '__add_new_prop__') return;
-  var name = prompt('Enter new property name:');
+  var name = prompt('Enter new category name:');
   if (!name || !name.trim()) {
-    // Revert to first property
+    // Revert to first category
     selectEl.value = data.properties.length ? data.properties[0].id : '';
     return;
   }
@@ -3063,7 +3576,7 @@ function handleNewPropertySelect(selectEl) {
   data.properties.push(newProp);
   save();
   // Rebuild options and select the new one
-  var opts = data.properties.map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="__add_new_prop__">+ Add new property...</option>';
+  var opts = getSortedProperties().map(function(p) { return '<option value="' + p.id + '">' + esc(p.name) + '</option>'; }).join('') + '<option value="__add_new_prop__">+ Add new category...</option>';
   selectEl.innerHTML = opts;
   selectEl.value = newProp.id;
   populateDropdowns();
@@ -3117,17 +3630,30 @@ function renameCategory(oldName) {
 function buildInlinePropSelect(item) {
   var curProp = getProperty(item.propertyId);
   var curColor = curProp ? curProp.color : '#999';
-  var opts = data.properties.map(function(p) {
-    return '<option value="' + p.id + '"' + (p.id === item.propertyId ? ' selected' : '') + '>' + esc(p.name) + '</option>';
+  var curName = curProp ? curProp.name : '';
+  // Render only the current option in the row. With 500+ rows × 20 categories
+  // the full options list created ~10,000 <option> nodes per render. The rest
+  // are filled lazily on focus via _populateInlineProp(), which is invisible
+  // to the user — the dropdown opens with the full list ready.
+  return '<select class="inline-prop-select" data-id="' + item.id + '" data-current="' + item.propertyId + '" onfocus="_populateInlineProp(this)" onmousedown="_populateInlineProp(this)" onchange="inlineChangePropertyOrAdd(this)" style="border:1px solid transparent;background:transparent;color:' + curColor + ';font-weight:600;font-size:13px;padding:2px 4px;border-radius:4px;cursor:pointer;min-width:80px"><option value="' + item.propertyId + '" selected>' + esc(curName) + '</option></select>';
+}
+
+function _populateInlineProp(sel) {
+  if (sel.dataset.populated === '1') return;
+  sel.dataset.populated = '1';
+  var current = sel.dataset.current || sel.value;
+  var opts = getSortedProperties().map(function(p) {
+    return '<option value="' + p.id + '"' + (p.id === current ? ' selected' : '') + '>' + esc(p.name) + '</option>';
   }).join('') + '<option value="__add_new_prop__">+ Add new...</option>';
-  return '<select class="inline-prop-select" data-id="' + item.id + '" onchange="inlineChangePropertyOrAdd(this)" style="border:1px solid transparent;background:transparent;color:' + curColor + ';font-weight:600;font-size:13px;padding:2px 4px;border-radius:4px;cursor:pointer;min-width:80px">' + opts + '</select>';
+  sel.innerHTML = opts;
+  sel.value = current;
 }
 
 function inlineChangePropertyOrAdd(sel) {
   if (sel.value === '__add_new_prop__') {
     var id = sel.getAttribute('data-id');
     var item = getItem(id);
-    var name = prompt('Enter new property name:');
+    var name = prompt('Enter new category name:');
     if (!name || !name.trim()) { sel.value = item ? item.propertyId : ''; return; }
     name = name.trim();
     var existing = data.properties.find(function(p) { return p.name.toLowerCase() === name.toLowerCase(); });
@@ -3153,7 +3679,7 @@ function inlineChangeProperty(sel) {
   var newProp = getProperty(newPropId);
   var oldPropId = item.propertyId;
   item.propertyId = newPropId;
-  data.movements.push({ id: genId(), itemId: id, fromId: oldPropId, toId: newPropId, date: today(), notes: 'Property: ' + (oldProp ? oldProp.name : '?') + ' -> ' + (newProp ? newProp.name : '?'), type: 'move' });
+  data.movements.push({ id: genId(), itemId: id, fromId: oldPropId, toId: newPropId, date: today(), notes: 'Category: ' + (oldProp ? oldProp.name : '?') + ' -> ' + (newProp ? newProp.name : '?'), type: 'move' });
   save();
   renderAllDebounced();
 }
@@ -3174,19 +3700,20 @@ function toggleDesc(el) {
   el.classList.toggle('expanded');
 }
 
-function inlineChangeDate(input) {
-  // Guard: ignore onchange fired by inputs being destroyed during innerHTML rebuild (iOS Safari)
-  if (!document.body.contains(input)) return;
+function inlineChangeDate(input, isBlur) {
+  if (isBlur) _activeDueInputId = null;
   var id = input.getAttribute('data-id');
+  if (!id) return;
   var item = getItem(id);
   if (!item) return;
   var val = input.value;
   var newDate = val ? val.substring(0, 10) : '';
   var newTime = val && val.length > 10 ? val.substring(11) : '';
   if (newDate === (item.dueDate || '') && newTime === (item.dueTime || '')) return;
-  // Don't allow clearing a date via an empty onchange — user must use edit modal to clear dates
-  if (!newDate && item.dueDate) {
-    console.log('[DATE] Blocked clearing date for "' + item.name + '" — likely spurious onchange');
+  // Spurious empty change events during picker interaction can fire with empty value;
+  // require explicit blur (user committed) before treating an empty value as a clear.
+  if (!newDate && item.dueDate && !isBlur) {
+    console.log('[DATE] Ignored spurious empty change for "' + item.name + '" — waiting for blur');
     return;
   }
   var oldLabel = item.dueDate ? (item.dueDate + (item.dueTime ? ' ' + item.dueTime : '')) : 'none';
@@ -3197,20 +3724,28 @@ function inlineChangeDate(input) {
   save();
   // Update the day-of-week label and color in-place without rebuilding the whole table.
   // This prevents the DOM from being destroyed while the user is still editing dates.
+  if (!document.body.contains(input)) {
+    if (isBlur) renderAllDebounced();
+    return;
+  }
   var ds = dueStatus(newDate);
   var dueCls = item.status === 'Done' ? '' : ds;
   var dueColor = dueCls === 'overdue' ? '#d93025' : dueCls === 'due-soon' ? '#f9ab00' : '#888';
   input.style.color = dueColor;
-  var daySpan = input.previousElementSibling;
-  if (newDate) {
-    var dayOfWeek = new Date(newDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' });
-    if (daySpan && daySpan.tagName === 'SPAN') {
-      daySpan.textContent = dayOfWeek;
+  var daySpan = input.parentElement ? input.parentElement.querySelector('.inline-due-day') : null;
+  if (daySpan) {
+    if (newDate) {
+      daySpan.textContent = new Date(newDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short' });
       daySpan.style.color = dueColor;
+    } else {
+      daySpan.textContent = '';
     }
-  } else if (daySpan && daySpan.tagName === 'SPAN') {
-    daySpan.textContent = '';
   }
+}
+
+var _activeDueInputId = null;
+function inlineDueFocus(input) {
+  _activeDueInputId = input.getAttribute('data-id');
 }
 
 function inlineRenameTask(input) {
@@ -3275,12 +3810,12 @@ function deleteSelectedCategory() {
 function deleteSelectedProperty() {
   var sel = document.getElementById('itemProperty');
   var propId = sel.value;
-  if (!propId) return alert('Select a property first.');
+  if (!propId) return alert('Select a category first.');
   var prop = data.properties.find(function(p) { return p.id === propId; });
   if (!prop) return;
   var count = data.items.filter(function(i) { return i.propertyId === propId; }).length;
   if (count > 0) return alert('Cannot delete "' + prop.name + '": ' + count + ' task(s) are assigned to it. Reassign them first.');
-  if (!confirm('Delete property "' + prop.name + '"?')) return;
+  if (!confirm('Delete category "' + prop.name + '"?')) return;
   data.properties = data.properties.filter(function(p) { return p.id !== propId; });
   save(); renderAllDebounced();
 }
@@ -3445,7 +3980,7 @@ function renderCalendar() {
 function renderReport() {
   var propId = document.getElementById('reportProperty').value;
   var el = document.getElementById('reportContent');
-  if (!propId) { el.innerHTML = '<p style="color:#aaa">Select a property above</p>'; return; }
+  if (!propId) { el.innerHTML = '<p style="color:#aaa">Select a category above</p>'; return; }
   var prop = getProperty(propId);
   if (!prop) return;
   var tasks = data.items.filter(function(i) { return i.propertyId === propId; });
@@ -3464,13 +3999,6 @@ function renderReport() {
     return '<div style="display:flex;align-items:center;gap:8px;margin:4px 0"><span style="width:90px;font-size:12px">' + s + ' (' + statusCounts[s] + ')</span><div style="flex:1;height:16px;background:#eee;border-radius:4px;overflow:hidden"><div style="width:' + w + '%;height:100%;background:' + (statusColors[s]||'#888') + ';border-radius:4px"></div></div><span style="font-size:12px;color:#888">' + w + '%</span></div>';
   }).join('');
 
-  // Category breakdown
-  var catCounts = {};
-  tasks.forEach(function(t) { catCounts[t.category] = (catCounts[t.category]||0) + 1; });
-  var catBars = Object.keys(catCounts).map(function(c) {
-    return '<span class="badge ' + (CATEGORY_BADGES[c]||'badge-gray') + '" style="margin:2px">' + c + ' (' + catCounts[c] + ')</span>';
-  }).join('');
-
   el.innerHTML = '<div style="margin-bottom:24px">'
     + '<h3 style="margin-bottom:12px"><span class="property-color" style="background:' + prop.color + '"></span>' + esc(prop.name) + '</h3>'
     + '<div class="stat-grid" style="margin-bottom:16px">'
@@ -3481,7 +4009,6 @@ function renderReport() {
     + '<div class="stat-card"><div class="stat-value">$' + actTotal.toLocaleString() + '</div><div class="stat-label">Actual Cost</div></div>'
     + '</div>'
     + '<h4 style="margin-bottom:8px">Status Breakdown</h4>' + statusBars
-    + '<h4 style="margin:16px 0 8px">Categories</h4><div>' + catBars + '</div>'
     + '</div>';
 }
 
@@ -3493,8 +4020,6 @@ function saveAsTemplate() {
   var tpl = {
     id: genId(),
     name: tplName.trim(),
-    category: document.getElementById('editCategory').value,
-    priority: document.getElementById('editPriority').value,
     recurrence: document.getElementById('editRecurrence').value,
     description: document.getElementById('editDesc').value.trim()
   };
@@ -3510,16 +4035,6 @@ function useTemplate(tplId) {
   switchTab('tasks');
   setTimeout(function() {
     document.getElementById('itemName').value = tpl.name;
-    if (tpl.category) {
-      var catEl = document.getElementById('itemCategory');
-      // Ensure category exists in dropdown
-      var found = false;
-      for (var i = 0; i < catEl.options.length; i++) {
-        if (catEl.options[i].value === tpl.category) { found = true; break; }
-      }
-      if (found) catEl.value = tpl.category;
-    }
-    if (tpl.priority) document.getElementById('itemPriority').value = tpl.priority;
     if (tpl.recurrence) document.getElementById('itemRecurrence').value = tpl.recurrence;
     if (tpl.description) document.getElementById('itemDesc').value = tpl.description;
     document.getElementById('itemName').focus();
@@ -3542,15 +4057,13 @@ function renderTemplates() {
   var rows = data.templates.map(function(t) {
     return '<tr>'
       + '<td><strong>' + esc(t.name) + '</strong>' + (t.description ? '<br><small style="color:#888">' + esc(t.description) + '</small>' : '') + '</td>'
-      + '<td><span class="badge ' + (CATEGORY_BADGES[t.category] || 'badge-gray') + '">' + esc(t.category || 'Other') + '</span></td>'
-      + '<td><span class="badge ' + (PRIORITY_BADGES[t.priority] || 'badge-gray') + '">' + esc(t.priority || 'Medium') + '</span></td>'
       + '<td>' + (t.recurrence && t.recurrence !== 'none' ? '<span class="badge badge-purple">' + t.recurrence + '</span>' : '--') + '</td>'
       + '<td>'
       + '<button class="btn btn-success btn-sm" onclick="useTemplate(\'' + t.id + '\')">Use</button> '
       + '<button class="btn btn-danger btn-sm" onclick="deleteTemplate(\'' + t.id + '\')">Del</button>'
       + '</td></tr>';
   }).join('');
-  el.innerHTML = '<table><thead><tr><th>Template</th><th>Category</th><th>Priority</th><th>Recurrence</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  el.innerHTML = '<table><thead><tr><th>Template</th><th>Recurrence</th><th>Actions</th></tr></thead><tbody>' + rows + '</tbody></table>';
 }
 
 // --- Alarm / Notification System ---
@@ -3575,6 +4088,8 @@ function playAlarmSound() {
       osc.start(ctx.currentTime + delay);
       osc.stop(ctx.currentTime + delay + 0.15);
     });
+    // Close AudioContext after beeps finish to prevent resource leak
+    setTimeout(function() { ctx.close(); }, 1500);
   } catch(e) {}
 }
 
@@ -3613,9 +4128,10 @@ function sendEmailNotification(item) {
     + '<h2 style="color:#d93025;margin:0 0 12px">⏰ Task Alarm</h2>'
     + '<table style="border-collapse:collapse;width:100%">'
     + r('Task', esc(item.name))
-    + r('Property', esc(propName))
-    + (item.category ? r('Category', esc(item.category)) : '')
-    + (item.priority ? r('Priority', esc(item.priority)) : '')
+    + r('Category', esc(propName))
+    + (item.phone ? r('Phone', '<a href="tel:' + esc(item.phone) + '" style="color:#27ae60;text-decoration:none">' + esc(item.phone) + '</a>') : '')
+    + (item.email ? r('Email', '<a href="mailto:' + esc(item.email) + '" style="color:#8e44ad;text-decoration:none">' + esc(item.email) + '</a>') : '')
+    + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">📍 ' + esc(item.address) + '</a>') : '')
     + (item.status ? r('Status', esc(item.status)) : '')
     + (dueStr ? r('Due', esc(dueStr)) : '')
     + (item.alarm ? r('Alarm', esc(new Date(item.alarm).toLocaleString())) : '')
@@ -3706,6 +4222,7 @@ function sendSmsNotification(item) {
   var prop = getProperty(item.propertyId);
   var propName = prop ? prop.name : '';
   var message = 'ALARM: ' + item.name;
+  if (item.phone) message += ' | Tel:' + item.phone;
   if (propName) message += ' | ' + propName;
   if (item.dueDate) message += ' | Due:' + formatDate(item.dueDate);
   if (item.alarm) message += ' | Alarm:' + new Date(item.alarm).toLocaleString();
@@ -3791,7 +4308,7 @@ function checkAlarms() {
       if (item.dueDate) body += '\nDue: ' + formatDate(item.dueDate);
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
-          var n = new Notification(title, { body: body, icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">&#128276;</text></svg>', tag: 'alarm-' + item.id, requireInteraction: true });
+          var n = new Notification(title, { body: body, icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="80">&#128276;</text></svg>', tag: 'alarm-' + item.id, requireInteraction: false });
           n.onclick = function() { window.focus(); n.close(); };
         } catch(e) {}
       }
@@ -3840,21 +4357,10 @@ function checkOverdueEscalation() {
       }).catch(function(){});
     }
 
-    // 7+ days overdue: auto-escalate priority (once)
-    if (daysOverdue >= 7 && !item.escalated) {
-      var oldPriority = item.priority;
-      if (item.priority === 'Low') item.priority = 'Medium';
-      else if (item.priority === 'Medium') item.priority = 'High';
-      if (item.priority !== oldPriority) {
-        item.escalated = true;
-        changed = true;
-        data.movements.push({ id: genId(), itemId: item.id, fromId: item.propertyId, toId: item.propertyId, date: today(), notes: 'Auto-escalated: ' + oldPriority + ' -> ' + item.priority + ' (overdue ' + daysOverdue + ' days)', type: 'edit' });
-      }
-    }
   });
   if (changed) { save(); renderAllDebounced(); }
 }
-setInterval(checkOverdueEscalation, 300000);
+setInterval(checkOverdueEscalation, 5700000);
 
 // advanceOverdueTasks — REMOVED
 // Previously auto-moved overdue tasks to tomorrow, which silently changed due dates.
@@ -3865,15 +4371,27 @@ function autoBackup() {
   var backupKey = STORAGE_KEY + '_backup_' + today();
   // Only backup once per day
   if (localStorage.getItem(backupKey)) return;
-  localStorage.setItem(backupKey, JSON.stringify(data));
-  // Clean old backups (keep last 7)
+  // Strip photos (base64 blobs) in a single stringify pass — the old
+  // clone-then-empty approach serialized the multi-MB photos array twice.
+  try {
+    var slim = JSON.stringify(data, function(key, value) {
+      if (key === 'photos') return [];
+      return value;
+    });
+    safeLocalStorageSet(backupKey, slim);
+  } catch (_) {
+    // Skip this day's backup if even the slim version doesn't fit — never
+    // let backup failure block the user.
+    return;
+  }
+  // Clean old backups (keep last 3)
   var keys = [];
   for (var i = 0; i < localStorage.length; i++) {
     var k = localStorage.key(i);
     if (k && k.startsWith(STORAGE_KEY + '_backup_')) keys.push(k);
   }
   keys.sort();
-  while (keys.length > 7) {
+  while (keys.length > 3) {
     localStorage.removeItem(keys.shift());
   }
 }
@@ -3921,8 +4439,28 @@ setInterval(autoBackup, 3600000);
 
 // Init
 document.getElementById('propColor').value = COLORS[0];
+// Snapshot all items BEFORE fillMissingRecurrences so that save() only stamps
+// truly changed items. Without this, save() sees _lastSavedSnapshot as empty {},
+// treats ALL items as changed, stamps all _fieldTs with Date.now(), and stale
+// local data wins merge conflicts — reverting cloud edits (e.g. due dates).
+_lastSavedSnapshot = _snapshotItems();
+_lastFieldSnapshot = {};
+_lastPhotoSig = {};
+var _legacyHadPhotos = false;
+(data.items || []).forEach(function(item) {
+  _lastFieldSnapshot[item.id] = _snapshotFields(item);
+  _lastPhotoSig[item.id] = _photoSig(item);
+  if (item.photos && item.photos.length > 0) _legacyHadPhotos = true;
+});
+// Migration: legacy users had photos inline in STORAGE_KEY. The new save()
+// strips photos from the main key — write them to PHOTO_KEY once now so a
+// reload before the next save doesn't lose them.
+if (_legacyHadPhotos && !localStorage.getItem(PHOTO_KEY)) _writePhotos();
 fillMissingRecurrences();
-renderAll(true);
+// Render only the active tab at startup. Rendering every tab here used to
+// dominate the 15-20 second init freeze on 500+ item data sets — other tabs
+// render lazily when the user switches to them via the _dirtyTabs mechanism.
+renderAll(false);
 initSync();
 setupPhotoDrop('addPhotoArea', 'addPhotoInput');
 setupPhotoDrop('editPhotoArea', 'editPhotoInput');
@@ -3945,8 +4483,9 @@ if ('serviceWorker' in navigator) {
     console.log('SW registered, scope:', reg.scope);
     // Force update check immediately on every page load
     reg.update();
-    // Then check every 2 minutes
-    setInterval(function() { reg.update(); }, 2 * 60 * 1000);
+    // Then check every 30 minutes (was 2 min — too aggressive for an app the user
+    // keeps open; the network refetch + parse contributed to background lag).
+    setInterval(function() { reg.update(); }, 30 * 60 * 1000);
   }).catch(function(err) {
     console.log('SW registration failed:', err);
   });

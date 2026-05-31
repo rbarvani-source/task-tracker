@@ -24,8 +24,21 @@ export default {
           if (!key || key.length < 4) {
             return json({ error: 'Sync key must be at least 4 characters' }, 400);
           }
-          const data = await env.TRACKER_KV.get('tracker:' + key);
-          return json({ data: data ? JSON.parse(data) : null });
+          const raw = await env.TRACKER_KV.get('tracker:' + key);
+          if (!raw) {
+            return json({ version: 0, data: null, updatedAt: null });
+          }
+          const parsed = JSON.parse(raw);
+          // Backwards compat: legacy records were stored as the raw data blob.
+          // Detect by presence of items/properties/movements at top level.
+          if (parsed && parsed.items && !parsed.data) {
+            return json({ version: 1, data: parsed, updatedAt: null });
+          }
+          return json({
+            version: parsed.version || 0,
+            data: parsed.data || null,
+            updatedAt: parsed.updatedAt || null,
+          });
         }
 
         if (request.method === 'PUT') {
@@ -37,14 +50,44 @@ export default {
           }
           const key = body.key;
           const data = body.data;
+          const baseVersion = body.baseVersion;
+          const force = body.force === true;
           if (!key || key.length < 4) {
             return json({ error: 'Sync key must be at least 4 characters' }, 400);
           }
           if (!data || !data.properties || !data.items || !data.movements) {
             return json({ error: 'Invalid data format' }, 400);
           }
-          await env.TRACKER_KV.put('tracker:' + key, JSON.stringify(data));
-          return json({ ok: true, timestamp: new Date().toISOString() });
+
+          // Optimistic concurrency: load current version, compare to baseVersion
+          let currentVersion = 0;
+          const existingRaw = await env.TRACKER_KV.get('tracker:' + key);
+          if (existingRaw) {
+            const existing = JSON.parse(existingRaw);
+            if (existing && existing.items && !existing.data) {
+              currentVersion = 1; // legacy record
+            } else {
+              currentVersion = existing.version || 0;
+            }
+          }
+
+          if (!force && typeof baseVersion === 'number' && baseVersion !== currentVersion) {
+            return json({
+              error: 'Stale version — pull latest before pushing',
+              conflict: true,
+              currentVersion: currentVersion,
+              baseVersion: baseVersion,
+            }, 409);
+          }
+
+          const newVersion = currentVersion + 1;
+          const record = {
+            version: newVersion,
+            data: data,
+            updatedAt: new Date().toISOString(),
+          };
+          await env.TRACKER_KV.put('tracker:' + key, JSON.stringify(record));
+          return json({ ok: true, version: newVersion, timestamp: record.updatedAt });
         }
 
         return json({ error: 'Method not allowed' }, 405);
@@ -169,7 +212,125 @@ export default {
       return json({ error: 'Worker error: ' + err.message }, 500);
     }
   },
+
+  // Cron-triggered alarm scanner — fires alarms even when no browser is open.
+  // Runs every minute (configured in wrangler.toml). For each sync key,
+  // finds items whose alarm time has passed (within the last 24h) and that
+  // haven't been marked fired yet, and pushes email/SMS via bp/notify.
+  // bp/notify dedupes per (taskId, alarm), so re-runs are safe.
+  async scheduled(event, env, ctx) {
+    if (!env.TRACKER_KV) return;
+    const now = Date.now();
+    const cutoff = now - 24 * 60 * 60 * 1000; // skip alarms older than 24h
+    const NOTIFY_URL = 'https://bp.rbarvani.workers.dev/notify';
+    const SMS_TO = '3156913000@vtext.com';
+    const EMAIL_TO = 't@bporta.com';
+
+    let cursor;
+    do {
+      const list = await env.TRACKER_KV.list({ prefix: 'tracker:', cursor });
+      for (const k of list.keys) {
+        const raw = await env.TRACKER_KV.get(k.name);
+        if (!raw) continue;
+        let parsed;
+        try { parsed = JSON.parse(raw); } catch (e) { continue; }
+        const data = (parsed && parsed.data) || (parsed && parsed.items ? parsed : null);
+        if (!data || !Array.isArray(data.items)) continue;
+
+        const propsById = {};
+        if (Array.isArray(data.properties)) {
+          for (const p of data.properties) propsById[p.id] = p;
+        }
+
+        for (const item of data.items) {
+          if (!item || !item.alarm || item.alarmFired) continue;
+          const alarmMs = Date.parse(item.alarm);
+          if (isNaN(alarmMs)) continue;
+          if (alarmMs > now) continue;     // not yet due
+          if (alarmMs < cutoff) continue;  // too stale, skip
+
+          const prop = propsById[item.propertyId];
+          const propName = prop ? prop.name : '';
+
+          if (item.notifyEmail !== false) {
+            ctx.waitUntil(postNotify(NOTIFY_URL, buildEmailPayload(EMAIL_TO, item, propName)));
+          }
+          if (item.notifySms === true) {
+            ctx.waitUntil(postNotify(NOTIFY_URL, buildSmsPayload(SMS_TO, item, propName)));
+          }
+        }
+      }
+      cursor = list.list_complete ? undefined : list.cursor;
+    } while (cursor);
+  },
 };
+
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function buildSmsPayload(to, item, propName) {
+  let msg = 'ALARM: ' + (item.name || '');
+  if (item.phone) msg += ' | Tel:' + item.phone;
+  if (propName) msg += ' | ' + propName;
+  if (item.dueDate) msg += ' | Due:' + item.dueDate;
+  if (item.alarm) msg += ' | Alarm:' + new Date(item.alarm).toLocaleString();
+  if (item.notes) {
+    const noteText = Array.isArray(item.notes)
+      ? item.notes.map(n => (n && n.text) ? n.text : n).join(' ')
+      : item.notes;
+    msg += ' | ' + noteText;
+  }
+  if (msg.length > 160) msg = msg.substring(0, 157) + '...';
+  return { to, subject: '', html: msg, taskId: item.id, alarm: item.alarm };
+}
+
+function buildEmailPayload(to, item, propName) {
+  const r = (label, val) =>
+    '<tr><td style="padding:8px;font-weight:bold;color:#555;border-bottom:1px solid #eee">'
+    + label + '</td><td style="padding:8px;border-bottom:1px solid #eee">' + val + '</td></tr>';
+  let dueStr = item.dueDate || '';
+  if (dueStr && item.dueTime) dueStr += ' ' + item.dueTime;
+  const urls = (item.urls && item.urls.length > 0) ? item.urls : (item.url ? [item.url] : []);
+  const html = '<div style="font-family:sans-serif;max-width:500px">'
+    + '<h2 style="color:#d93025;margin:0 0 12px">&#9200; Task Alarm</h2>'
+    + '<table style="border-collapse:collapse;width:100%">'
+    + r('Task', escHtml(item.name))
+    + r('Category', escHtml(propName))
+    + (item.phone ? r('Phone', '<a href="tel:' + escHtml(item.phone) + '" style="color:#27ae60;text-decoration:none">' + escHtml(item.phone) + '</a>') : '')
+    + (item.email ? r('Email', '<a href="mailto:' + escHtml(item.email) + '" style="color:#8e44ad;text-decoration:none">' + escHtml(item.email) + '</a>') : '')
+    + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">&#128205; ' + escHtml(item.address) + '</a>') : '')
+    + (item.status ? r('Status', escHtml(item.status)) : '')
+    + (dueStr ? r('Due', escHtml(dueStr)) : '')
+    + (item.alarm ? r('Alarm', escHtml(new Date(item.alarm).toLocaleString())) : '')
+    + (item.recurrence && item.recurrence !== 'none' ? r('Recurrence', escHtml(item.recurrence)) : '')
+    + (item.description ? r('Details', escHtml(item.description)) : '')
+    + (urls.length > 0 ? r('URLs', urls.map(u => '<a href="' + escHtml(u) + '" target="_blank">' + escHtml(u) + '</a>').join('<br>')) : '')
+    + (item.assignee ? r('Assignee', escHtml(item.assignee)) : '')
+    + (item.estimatedCost ? r('Est. Cost', '$' + escHtml(item.estimatedCost)) : '')
+    + (item.actualCost ? r('Actual Cost', '$' + escHtml(item.actualCost)) : '')
+    + (item.subtasks && item.subtasks.length > 0 ? r('Sub-Tasks', '<div style="margin:0;padding:0">' + item.subtasks.map(s => '<div style="padding:2px 0;' + (s.done ? 'color:#999;text-decoration:line-through' : '') + '">' + (s.done ? '&#9745;' : '&#9744;') + ' ' + escHtml(s.text) + '</div>').join('') + '<div style="margin-top:4px;font-size:11px;color:#888">' + item.subtasks.filter(s => s.done).length + ' of ' + item.subtasks.length + ' complete</div></div>') : '')
+    + (item.notes && item.notes.length > 0 ? r('Notes', item.notes.map(n => escHtml((n && n.text) ? n.text : n)).join('<br>')) : '')
+    + (item.createdAt ? r('Created', escHtml(item.createdAt)) : '')
+    + '</table>'
+    + '<p style="color:#888;font-size:12px;margin-top:16px">Sent by Property Task Tracker (cron)</p>'
+    + '</div>';
+  return { to, subject: 'Task Alarm: ' + (item.name || ''), html, taskId: item.id, alarm: item.alarm };
+}
+
+async function postNotify(url, payload) {
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    // Best-effort; cron will retry next minute, dedupe protects against duplicates
+  }
+}
 
 function json(obj, status) {
   if (!status) status = 200;

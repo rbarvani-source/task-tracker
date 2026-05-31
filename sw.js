@@ -1,4 +1,4 @@
-var CACHE_NAME = 'tasks-v10';
+var CACHE_NAME = 'tasks-v21';
 var ASSETS = [
   './',
   './index.html',

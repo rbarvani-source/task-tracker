@@ -10,3 +10,8 @@ directory = "."
 [[kv_namespaces]]
 binding = "TRACKER_KV"
 id = "c23c76bcf9b64059bbb9f6b98d374ccb"
+
+# Cron-triggered alarm scanner — fires alarms server-side every minute
+# so SMS/email arrive on time even when no browser is open.
+[triggers]
+crons = ["* * * * *"]

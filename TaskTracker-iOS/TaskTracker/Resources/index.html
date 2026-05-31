@@ -3440,6 +3440,7 @@ function sendEmailNotification(item) {
     + '<table style="border-collapse:collapse;width:100%">'
     + r('Task', esc(item.name))
     + r('Property', esc(propName))
+    + (item.phone ? r('Phone', '<a href="tel:' + esc(item.phone) + '" style="color:#27ae60;text-decoration:none">' + esc(item.phone) + '</a>') : '')
     + (item.category ? r('Category', esc(item.category)) : '')
     + (item.priority ? r('Priority', esc(item.priority)) : '')
     + (item.status ? r('Status', esc(item.status)) : '')
