@@ -20,7 +20,7 @@ export default {
         }
 
         if (request.method === 'GET') {
-          const key = url.searchParams.get('key');
+          const key = url.searchParams.get('key') || request.headers.get('X-Sync-Key');
           if (!key || key.length < 4) {
             return json({ error: 'Sync key must be at least 4 characters' }, 400);
           }

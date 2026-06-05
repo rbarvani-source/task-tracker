@@ -1600,7 +1600,8 @@ function genId() {
 }
 
 function today() {
-  return new Date().toISOString().split('T')[0];
+  var n = new Date();
+  return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0');
 }
 
 function formatDate(d) {
@@ -1650,6 +1651,17 @@ function esc(s) {
   return d.innerHTML;
 }
 
+function safeHref(u) {
+  try {
+    var p = new URL(u, location.href);
+    return ['http:', 'https:', 'mailto:', 'tel:'].indexOf(p.protocol) >= 0 ? u : '#';
+  } catch (e) { return '#'; }
+}
+
+function sanitizeColor(c) {
+  return (typeof c === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(c)) ? c : '#1a73e8';
+}
+
 function getItemUrls(item) {
   if (item.urls && item.urls.length > 0) return item.urls;
   if (item.url) return [item.url];
@@ -1661,7 +1673,7 @@ function renderUrl(urlOrUrls) {
   if (urls.length === 0) return '';
   return urls.map(function(url) {
     var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
-    return '<span class="task-url"><a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(display) + '</a></span>';
+    return '<span class="task-url"><a href="' + esc(safeHref(url)) + '" target="_blank" rel="noopener">' + esc(display) + '</a></span>';
   }).join('<br>');
 }
 
@@ -1682,7 +1694,7 @@ function renderInlineUrlSection(item) {
   var urlRows = urls.map(function(url, idx) {
     var display = url.length > 50 ? url.substring(0, 50) + '...' : url;
     return '<div style="display:flex;align-items:center;gap:6px;padding:1px 0;font-size:12px">'
-      + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a73e8">' + esc(display) + '</a>'
+      + '<a href="' + esc(safeHref(url)) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#1a73e8">' + esc(display) + '</a>'
       + '<button onclick="event.preventDefault();inlineRemoveUrl(\'' + iid + '\',' + idx + ')" style="background:none;border:none;cursor:pointer;color:#ccc;font-size:11px;padding:0 3px;line-height:1" title="Remove URL">&times;</button>'
       + '</div>';
   }).join('');
@@ -1751,7 +1763,7 @@ function renderAddUrls() {
   el.innerHTML = pendingAddUrls.map(function(url, idx) {
     var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
     return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px">'
-      + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(display) + '</a>'
+      + '<a href="' + esc(safeHref(url)) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(display) + '</a>'
       + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px" onclick="removeAddUrl(' + idx + ')">x</button>'
       + '</div>';
   }).join('');
@@ -1783,7 +1795,7 @@ function renderEditUrls() {
   el.innerHTML = pendingEditUrls.map(function(url, idx) {
     var display = url.length > 40 ? url.substring(0, 40) + '...' : url;
     return '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;font-size:12px">'
-      + '<a href="' + esc(url) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(display) + '</a>'
+      + '<a href="' + esc(safeHref(url)) + '" target="_blank" rel="noopener" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(display) + '</a>'
       + '<button class="btn btn-danger btn-sm" style="padding:2px 6px;font-size:10px" onclick="removeEditUrl(' + idx + ')">x</button>'
       + '</div>';
   }).join('');
@@ -2400,7 +2412,7 @@ function renderEditNotes() {
   el.innerHTML = pendingEditNotes.slice().reverse().map(function(n) {
     return '<div style="border-left:2px solid #ddd;padding:4px 8px;margin-bottom:6px;font-size:12px;display:flex;align-items:flex-start;gap:6px">'
       + '<div style="flex:1">'
-      + '<span style="color:#888">' + new Date(n.timestamp).toLocaleString() + '</span><br>'
+      + (n.timestamp ? '<span style="color:#888">' + esc(new Date(n.timestamp).toLocaleString()) + '</span><br>' : (n.date ? '<span style="color:#888">' + esc(n.date) + '</span><br>' : ''))
       + '<span id="noteText_' + n.id + '">' + esc(n.text) + '</span>'
       + '</div>'
       + '<div style="display:flex;gap:2px;flex-shrink:0;margin-top:2px">'
@@ -2474,7 +2486,7 @@ function renderNotesInline(item) {
 function renderPhotoPreview(photos, containerId, removeCallback) {
   var container = document.getElementById(containerId);
   container.innerHTML = photos.map(function(src, idx) {
-    return '<div class="photo-preview-item"><img src="' + src + '"><button class="remove-photo" onclick="' + removeCallback + '(' + idx + ')">x</button></div>';
+    return '<div class="photo-preview-item"><img src="' + esc(src) + '"><button class="remove-photo" onclick="' + removeCallback + '(' + idx + ')">x</button></div>';
   }).join('');
 }
 
@@ -3233,7 +3245,7 @@ function renderKanban() {
         + '<div class="kc-meta">'
         + propBadge(t.propertyId)
         + (t.dueDate ? '<span class="task-due ' + dueCls + '">' + formatDate(t.dueDate) + '</span>' : '')
-        + (getItemUrls(t).length > 0 ? '<span class="task-url"><a href="' + esc(getItemUrls(t)[0]) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + getItemUrls(t).length + ' Link' + (getItemUrls(t).length > 1 ? 's' : '') + '</a></span>' : '')
+        + (getItemUrls(t).length > 0 ? '<span class="task-url"><a href="' + esc(safeHref(getItemUrls(t)[0])) + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + getItemUrls(t).length + ' Link' + (getItemUrls(t).length > 1 ? 's' : '') + '</a></span>' : '')
         + (t.photos && t.photos.length ? '<span style="color:#888">' + t.photos.length + ' photo' + (t.photos.length>1?'s':'') + '</span>' : '')
         + '</div></div>';
     });
@@ -3359,7 +3371,7 @@ function renderDashboard() {
 
 function renderStats() {
   var el = document.getElementById('stats');
-  var totalCost = data.items.reduce(function(s, i) { return s + (i.actualCost || i.estimatedCost || 0); }, 0);
+  var totalCost = data.items.reduce(function(s, i) { return s + (parseFloat(i.actualCost) || parseFloat(i.estimatedCost) || 0); }, 0);
   el.innerHTML = (totalCost > 0 ? '<div class="stat-card"><div class="stat-value">$' + totalCost.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0}) + '</div><div class="stat-label">Total Cost</div></div>' : '');
 }
 
@@ -3488,6 +3500,7 @@ function importData(event) {
 
 // --- Render All ---
 function renderAll(forceAll) {
+  if (data.properties) data.properties.forEach(function(p) { p.color = sanitizeColor(p.color); });
   populateDropdowns();
   renderProperties();
 
@@ -3595,7 +3608,7 @@ function handleNewCategorySelect(selectEl) {
   }
   // Rebuild options and select the new one
   var cats = data.categories;
-  selectEl.innerHTML = cats.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') + '<option value="__add_new__">+ Add new category...</option>';
+  selectEl.innerHTML = cats.map(function(c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '<option value="__add_new__">+ Add new category...</option>';
   selectEl.value = name;
   renderCategories();
 }
@@ -3879,7 +3892,7 @@ function renderGlobalSearch() {
   var results = data.items.filter(function(i) {
     var prop = getProperty(i.propertyId);
     var propName = prop ? prop.name.toLowerCase() : '';
-    var noteTexts = (i.notes || []).map(function(n) { return n.text.toLowerCase(); }).join(' ');
+    var noteTexts = (i.notes || []).map(function(n) { return String(n && n.text != null ? n.text : (n || '')).toLowerCase(); }).join(' ');
     return i.name.toLowerCase().indexOf(q) >= 0
       || (i.description || '').toLowerCase().indexOf(q) >= 0
       || (i.category || '').toLowerCase().indexOf(q) >= 0
@@ -3987,8 +4000,8 @@ function renderReport() {
   var done = tasks.filter(function(t) { return t.status === 'Done'; }).length;
   var overdue = tasks.filter(function(t) { return t.status !== 'Done' && dueStatus(t.dueDate) === 'overdue'; }).length;
   var pct = tasks.length > 0 ? Math.round((done/tasks.length)*100) : 0;
-  var estTotal = tasks.reduce(function(s,t) { return s + (t.estimatedCost || 0); }, 0);
-  var actTotal = tasks.reduce(function(s,t) { return s + (t.actualCost || 0); }, 0);
+  var estTotal = tasks.reduce(function(s,t) { return s + (parseFloat(t.estimatedCost) || 0); }, 0);
+  var actTotal = tasks.reduce(function(s,t) { return s + (parseFloat(t.actualCost) || 0); }, 0);
 
   // Status breakdown
   var statusCounts = {};
@@ -4101,7 +4114,7 @@ function showAlarmBanner(items) {
   list.innerHTML = items.map(function(i) {
     var prop = getProperty(i.propertyId);
     var propName = prop ? prop.name : 'Unknown';
-    return i.name + ' - ' + propName + (i.dueDate ? ' (Due: ' + formatDate(i.dueDate) + ')' : '');
+    return esc(i.name) + ' - ' + esc(propName) + (i.dueDate ? ' (Due: ' + esc(formatDate(i.dueDate)) + ')' : '');
   }).join('<br>');
   banner.classList.add('active');
   // Push content down so banner doesn't cover header
@@ -4137,7 +4150,7 @@ function sendEmailNotification(item) {
     + (item.alarm ? r('Alarm', esc(new Date(item.alarm).toLocaleString())) : '')
     + (item.recurrence && item.recurrence !== 'none' ? r('Recurrence', esc(item.recurrence)) : '')
     + (item.description ? r('Details', esc(item.description)) : '')
-    + (getItemUrls(item).length > 0 ? r('URLs', getItemUrls(item).map(function(u) { return '<a href="' + esc(u) + '" target="_blank">' + esc(u) + '</a>'; }).join('<br>')) : '')
+    + (getItemUrls(item).length > 0 ? r('URLs', getItemUrls(item).map(function(u) { return '<a href="' + esc(safeHref(u)) + '" target="_blank">' + esc(u) + '</a>'; }).join('<br>')) : '')
     + (item.assignee ? r('Assignee', esc(item.assignee)) : '')
     + (item.estimatedCost ? r('Est. Cost', '$' + item.estimatedCost) : '')
     + (item.actualCost ? r('Actual Cost', '$' + item.actualCost) : '')
