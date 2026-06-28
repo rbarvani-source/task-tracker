@@ -1,6 +1,10 @@
 name = "t"
 main = "worker.js"
 compatibility_date = "2024-12-01"
+workers_dev = true
+routes = [
+  { pattern = "t.earlville.com", custom_domain = true, zone_name = "earlville.com" }
+]
 
 # Serve static assets (index.html, sw.js, icons, manifest)
 [assets]

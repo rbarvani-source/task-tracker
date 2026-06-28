@@ -87,6 +87,9 @@ export default {
             updatedAt: new Date().toISOString(),
           };
           await env.TRACKER_KV.put('tracker:' + key, JSON.stringify(record));
+          // Maintain a key index so the cron alarm scanner never needs KV list()
+          // (which has a 1,000/day free-tier cap that a per-minute cron blows through).
+          await addToIndex(env, 'tracker:' + key);
           return json({ ok: true, version: newVersion, timestamp: record.updatedAt });
         }
 
@@ -111,9 +114,15 @@ export default {
           return json({ error: 'Missing required fields: to, html' }, 400);
         }
 
-        // Deduplication: skip if already sent for this taskId+alarm combo
+        // Detect SMS gateway addresses early so the dedupe key is channel-specific —
+        // email and SMS for the same task+alarm must not collide on one dedupe marker.
+        const smsGateways = ['@vtext.com', '@tmomail.net', '@txt.att.net', '@messaging.sprintpcs.com', '@msg.fi.google.com'];
+        const isSms = smsGateways.some(gw => to.toLowerCase().endsWith(gw));
+        const channel = isSms ? 'sms' : 'email';
+
+        // Deduplication: skip if already sent for this taskId+alarm+channel combo
         if (taskId && alarm && env.TRACKER_KV) {
-          const dedupeKey = 'notify:' + taskId + ':' + alarm;
+          const dedupeKey = 'notify:' + taskId + ':' + alarm + ':' + channel;
           const existing = await env.TRACKER_KV.get(dedupeKey);
           if (existing) {
             return json({ skipped: true, message: 'Already sent' });
@@ -141,10 +150,7 @@ export default {
           }
         }
 
-        // Send via Resend API
-        // Detect SMS gateway addresses — send plain text for carrier gateways
-        const smsGateways = ['@vtext.com', '@tmomail.net', '@txt.att.net', '@messaging.sprintpcs.com', '@msg.fi.google.com'];
-        const isSms = smsGateways.some(gw => to.toLowerCase().endsWith(gw));
+        // Send via Resend API (isSms/channel already derived above)
         const fromAddress = env.RESEND_FROM || 'Task Tracker <notifications@resend.dev>';
 
         // Strip HTML tags for plain text version (used for SMS)
@@ -180,7 +186,7 @@ export default {
 
         // Mark as sent for deduplication (expire after 7 days)
         if (taskId && alarm && env.TRACKER_KV) {
-          const dedupeKey = 'notify:' + taskId + ':' + alarm;
+          const dedupeKey = 'notify:' + taskId + ':' + alarm + ':' + channel;
           await env.TRACKER_KV.put(dedupeKey, JSON.stringify({
             emailId: resendResult.id,
             sentAt: new Date().toISOString(),
@@ -226,44 +232,84 @@ export default {
     const SMS_TO = '3156913000@vtext.com';
     const EMAIL_TO = 't@bporta.com';
 
-    let cursor;
-    do {
-      const list = await env.TRACKER_KV.list({ prefix: 'tracker:', cursor });
-      for (const k of list.keys) {
-        const raw = await env.TRACKER_KV.get(k.name);
-        if (!raw) continue;
-        let parsed;
-        try { parsed = JSON.parse(raw); } catch (e) { continue; }
-        const data = (parsed && parsed.data) || (parsed && parsed.items ? parsed : null);
-        if (!data || !Array.isArray(data.items)) continue;
+    // Resolve the set of sync keys from a maintained index instead of KV list().
+    // A per-minute cron doing list() exceeds the 1,000/day free-tier list cap;
+    // reads (get) are capped far higher, so we read the index + each record by
+    // key. The index is seeded once via a single list() if absent, and kept
+    // current by the /sync PUT handler thereafter.
+    let keyNames = [];
+    let needSeed = false;
+    const idxRaw = await env.TRACKER_KV.get('__tracker_index__');
+    if (idxRaw === null) {
+      needSeed = true;
+    } else {
+      try { keyNames = JSON.parse(idxRaw); } catch (e) { needSeed = true; }
+      if (!Array.isArray(keyNames)) { keyNames = []; needSeed = true; }
+    }
+    if (needSeed) {
+      // Index missing OR corrupt (non-JSON / non-array) — rebuild from a single list() and
+      // persist it, so a bad value can never permanently disable the alarm scanner.
+      keyNames = [];
+      let cursor;
+      do {
+        const list = await env.TRACKER_KV.list({ prefix: 'tracker:', cursor });
+        for (const k of list.keys) keyNames.push(k.name);
+        cursor = list.list_complete ? undefined : list.cursor;
+      } while (cursor);
+      await env.TRACKER_KV.put('__tracker_index__', JSON.stringify(keyNames));
+    }
 
-        const propsById = {};
-        if (Array.isArray(data.properties)) {
-          for (const p of data.properties) propsById[p.id] = p;
+    for (const name of keyNames) {
+      const raw = await env.TRACKER_KV.get(name);
+      if (!raw) continue;
+      let parsed;
+      try { parsed = JSON.parse(raw); } catch (e) { continue; }
+      const data = (parsed && parsed.data) || (parsed && parsed.items ? parsed : null);
+      if (!data || !Array.isArray(data.items)) continue;
+
+      const propsById = {};
+      if (Array.isArray(data.properties)) {
+        for (const p of data.properties) propsById[p.id] = p;
+      }
+
+      for (const item of data.items) {
+        if (!item || !item.alarm || item.alarmFired) continue;
+        const alarmMs = Date.parse(item.alarm);
+        if (isNaN(alarmMs)) continue;
+        if (alarmMs > now) continue;     // not yet due
+        if (alarmMs < cutoff) continue;  // too stale, skip
+
+        const prop = propsById[item.propertyId];
+        const propName = prop ? prop.name : '';
+
+        if (item.notifyEmail !== false) {
+          ctx.waitUntil(postNotify(NOTIFY_URL, buildEmailPayload(EMAIL_TO, item, propName)));
         }
-
-        for (const item of data.items) {
-          if (!item || !item.alarm || item.alarmFired) continue;
-          const alarmMs = Date.parse(item.alarm);
-          if (isNaN(alarmMs)) continue;
-          if (alarmMs > now) continue;     // not yet due
-          if (alarmMs < cutoff) continue;  // too stale, skip
-
-          const prop = propsById[item.propertyId];
-          const propName = prop ? prop.name : '';
-
-          if (item.notifyEmail !== false) {
-            ctx.waitUntil(postNotify(NOTIFY_URL, buildEmailPayload(EMAIL_TO, item, propName)));
-          }
-          if (item.notifySms === true) {
-            ctx.waitUntil(postNotify(NOTIFY_URL, buildSmsPayload(SMS_TO, item, propName)));
-          }
+        if (item.notifySms === true) {
+          ctx.waitUntil(postNotify(NOTIFY_URL, buildSmsPayload(SMS_TO, item, propName)));
         }
       }
-      cursor = list.list_complete ? undefined : list.cursor;
-    } while (cursor);
+    }
   },
 };
+
+async function addToIndex(env, dataKey) {
+  // Best-effort maintenance of the cron scanner's key index. Failures are
+  // non-fatal: the scanner self-heals by re-seeding from list() if the index
+  // is ever missing.
+  try {
+    const raw = await env.TRACKER_KV.get('__tracker_index__');
+    let keys;
+    try { keys = raw ? JSON.parse(raw) : []; } catch (_) { keys = []; } // corrupt -> reset, don't abort
+    if (!Array.isArray(keys)) keys = [];
+    if (!keys.includes(dataKey)) {
+      keys.push(dataKey);
+      await env.TRACKER_KV.put('__tracker_index__', JSON.stringify(keys));
+    }
+  } catch (e) {
+    // ignore — index will be rebuilt by the scheduled handler if needed
+  }
+}
 
 function escHtml(s) {
   return String(s == null ? '' : s)
@@ -274,14 +320,20 @@ function escHtml(s) {
 function buildSmsPayload(to, item, propName) {
   let msg = 'ALARM: ' + (item.name || '');
   if (item.phone) msg += ' | Tel:' + item.phone;
-  if (propName) msg += ' | ' + propName;
+  if (item.address) msg += ' | ' + item.address;
+  const urls = (item.urls && item.urls.length > 0) ? item.urls : (item.url ? [item.url] : []);
+  if (urls.length) msg += ' | ' + urls[0];
+  if (item.subtasks && item.subtasks.length) {
+    const open = item.subtasks.filter(s => !s.done).map(s => s.text);
+    msg += ' | List: ' + (open.length ? open.join(', ') : 'all done');
+  }
   if (item.dueDate) msg += ' | Due:' + item.dueDate;
   if (item.alarm) msg += ' | Alarm:' + new Date(item.alarm).toLocaleString();
   if (item.notes) {
     const noteText = Array.isArray(item.notes)
       ? item.notes.map(n => (n && n.text) ? n.text : n).join(' ')
       : item.notes;
-    msg += ' | ' + noteText;
+    if (noteText) msg += ' | ' + noteText;
   }
   if (msg.length > 160) msg = msg.substring(0, 157) + '...';
   return { to, subject: '', html: msg, taskId: item.id, alarm: item.alarm };
@@ -298,11 +350,9 @@ function buildEmailPayload(to, item, propName) {
     + '<h2 style="color:#d93025;margin:0 0 12px">&#9200; Task Alarm</h2>'
     + '<table style="border-collapse:collapse;width:100%">'
     + r('Task', escHtml(item.name))
-    + r('Category', escHtml(propName))
     + (item.phone ? r('Phone', '<a href="tel:' + escHtml(item.phone) + '" style="color:#27ae60;text-decoration:none">' + escHtml(item.phone) + '</a>') : '')
     + (item.email ? r('Email', '<a href="mailto:' + escHtml(item.email) + '" style="color:#8e44ad;text-decoration:none">' + escHtml(item.email) + '</a>') : '')
     + (item.address ? r('Address', '<a href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(item.address) + '" target="_blank" rel="noopener" title="Driving directions" style="color:#1a73e8;text-decoration:none">&#128205; ' + escHtml(item.address) + '</a>') : '')
-    + (item.status ? r('Status', escHtml(item.status)) : '')
     + (dueStr ? r('Due', escHtml(dueStr)) : '')
     + (item.alarm ? r('Alarm', escHtml(new Date(item.alarm).toLocaleString())) : '')
     + (item.recurrence && item.recurrence !== 'none' ? r('Recurrence', escHtml(item.recurrence)) : '')
