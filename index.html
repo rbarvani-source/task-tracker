@@ -90,6 +90,8 @@
   [data-theme="dark"] .status-blocked{background:#4a2420; color:#f0a39c}
   .row .edit{flex:0 0 auto; background:transparent; border:none; color:var(--text3); font-size:18px; padding:4px 8px; border-radius:6px}
   .row .edit:hover{background:var(--hover); color:var(--text)}
+  .row .del{flex:0 0 auto; background:transparent; border:none; color:var(--text3); font-size:15px; padding:4px 6px; border-radius:6px; opacity:.7}
+  .row .del:hover{background:var(--hover); color:var(--danger); opacity:1}
   .empty{text-align:center; color:var(--text3); padding:60px 20px}
   .empty p{font-size:16px; margin:0 0 6px} .empty small{font-size:13px}
 
@@ -793,6 +795,7 @@ function rowHtml(it,i){
     + '</div>'
     + st
     + '<button class="edit" data-act="edit" title="Edit">&#9998;</button>'
+    + '<button class="del" data-act="delete" title="Delete task">&#128465;</button>'
     + '</div>';
 }
 var _rafPending=false;
@@ -827,6 +830,7 @@ $('viewport').addEventListener('click', function(e){
   var act=actEl?actEl.getAttribute('data-act'):'open';
   if(act==='done') toggleDone(id);
   else if(act==='star') toggleHighlight(id);
+  else if(act==='delete') deleteItem(id);                // quick delete from the row (confirms first)
   else openEditor(id);                                   // 'open' (row body) or 'edit'
 });
 
