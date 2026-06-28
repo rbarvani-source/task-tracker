@@ -236,11 +236,12 @@
         <div class="fld"><label>Status</label><select id="fStatus">
           <option>To Do</option><option>In Progress</option><option>Done</option><option>Blocked</option>
         </select></div>
-        <div class="fld"><label>Recurrence</label><select id="fRec">
+        <div class="fld"><label>Recurrence</label><select id="fRec" onchange="onRecChange()">
           <option value="none">None</option><option value="daily">Daily</option><option value="weekly">Weekly</option>
           <option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="yearly">Yearly</option>
         </select></div>
       </div>
+      <div class="fld" id="fRecEndWrap" style="display:none"><label>Repeat Until <span style="font-weight:400;text-transform:none;color:var(--text3)">— optional, blank = no end</span></label><input type="date" id="fRecEnd"></div>
     </div>
     <div class="foot">
       <button class="btn danger" id="fDelete" style="display:none" onclick="deleteFromEditor()">Delete</button>
@@ -318,7 +319,7 @@ var MAX_MOVEMENTS = 2000; // cap the (UI-less) audit log so the photo-free local
 var COLORS = ['#1a73e8','#e65100','#1e8e3e','#d93025','#9334e6','#00897b','#c2185b','#6d4c41'];
 var DEFAULT_CATEGORIES = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
 var STATUS_CLASSES = {'To Do':'status-todo','In Progress':'status-in-progress','Done':'status-done','Blocked':'status-blocked'};
-var MERGE_FIELDS = ['name','category','propertyId','description','status','dueDate','dueTime','url','urls','phone','email','address','alarm','alarmFired','notifyEmail','notifySms','recurrence','assignee','estimatedCost','actualCost','escalated','escalationReminded','highlight'];
+var MERGE_FIELDS = ['name','category','propertyId','description','status','dueDate','dueTime','url','urls','phone','email','address','alarm','alarmFired','notifyEmail','notifySms','recurrence','recurEnd','assignee','estimatedCost','actualCost','escalated','escalationReminded','highlight'];
 var REC_COUNT = {daily:30, weekly:12, monthly:12, quarterly:8, yearly:3};
 var ROW_H = 72, OVERSCAN = 6;
 
@@ -363,6 +364,7 @@ function normalizeItem(it){
   if(it.alarm==null) it.alarm='';
   if(it.alarmFired===undefined) it.alarmFired=false;
   if(!it.recurrence) it.recurrence='none';
+  if(it.recurEnd==null) it.recurEnd='';
   if(!Array.isArray(it.subtasks)) it.subtasks=[];
   if(!Array.isArray(it.notes)) it.notes=[];
   if(it.escalated===undefined) it.escalated=false;
@@ -858,6 +860,8 @@ function openEditor(id){
   $('fStatus').value = it?it.status:'To Do';
   $('fDue').value = it&&it.dueDate ? it.dueDate+'T'+(it.dueTime||'00:00') : '';
   $('fRec').value = it?it.recurrence||'none':'none';
+  $('fRecEnd').value = it?it.recurEnd||'':'';
+  onRecChange();
   $('fAlarm').value = it?it.alarm||'':'';
   $('fNotifyEmail').checked = it ? it.notifyEmail!==false : true;
   $('fNotifySms').checked = it ? it.notifySms===true : false;
@@ -880,6 +884,7 @@ function openEditor(id){
 function closeEditor(){ closeModal('editorOverlay'); editingId=null; revokeBlobs(); }
 function revokeBlobs(){ Object.keys(_blobCache).forEach(function(k){ try{ URL.revokeObjectURL(_blobCache[k]); }catch(e){} }); _blobCache={}; }
 /* onDueChange removed — changing the due date no longer auto-populates the alarm */
+function onRecChange(){ $('fRecEndWrap').style.display = ($('fRec').value!=='none') ? '' : 'none'; }
 function renderSubs(){
   $('fSubs').innerHTML = edSubtasks.map(function(s,i){
     return '<li draggable="false" ondragover="subDragOver(event)" ondrop="subDrop(event,'+i+')">'
@@ -976,6 +981,7 @@ function saveEditor(){
   var dueTime = dv&&dv.length>10?dv.substring(11):'';
   var urls=$('fUrls').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
   var alarm=$('fAlarm').value||'';
+  var recEnd=$('fRecEnd').value||'';
   var it;
   if(editingId){
     it=getItem(editingId);
@@ -984,7 +990,7 @@ function saveEditor(){
     var oldProp=it.propertyId;
     var wasStatus=it.status;
     it.name=name; it.propertyId=propId; it.status=$('fStatus').value;
-    it.dueDate=dueDate; it.dueTime=dueTime; it.recurrence=$('fRec').value; it.alarm=alarm;
+    it.dueDate=dueDate; it.dueTime=dueTime; it.recurrence=$('fRec').value; it.recurEnd=recEnd; it.alarm=alarm;
     it.notifyEmail=$('fNotifyEmail').checked; it.notifySms=$('fNotifySms').checked; it.highlight=$('fHighlight').checked;
     it.description=$('fDesc').value; it.phone=$('fPhone').value.trim(); it.email=$('fEmail').value.trim();
     it.address=$('fAddress').value.trim(); it.urls=urls; it.url=urls.length===1?urls[0]:'';
@@ -993,13 +999,13 @@ function saveEditor(){
       if(listSig(pr[0], it[pr[0]]) !== listSig(pr[0], pr[1])){ if(!it._fieldTs) it._fieldTs={}; it._fieldTs[pr[0]]=_nowLE; }
     });
     it.subtasks=edSubtasks; it.notes=edNotes; it.photos=edPhotos; it.attachments=edAttachments;
-    if(it.recurrence!=='none'){ if(!it.seriesId) it.seriesId=genId(); if(!it.anchorDay && it.dueDate) it.anchorDay=dayOf(it.dueDate); }
+    if(it.recurrence!=='none'){ if(!it.seriesId) it.seriesId=genId(); if(!it.anchorDay && it.dueDate) it.anchorDay=dayOf(it.dueDate); pruneSeriesAfter(it); }
     if(oldProp!==propId) addMovement(it,'move',oldProp,propId,'Moved category');
     addMovement(it,'edit',propId,propId,'Task edited');
     if(it.status==='Done' && wasStatus!=='Done' && it.recurrence && it.recurrence!=='none') regenerateRecurringTask(it);
   } else {
     it=normalizeItem({ id:genId(), name:name, propertyId:propId, category:'', description:$('fDesc').value,
-      status:$('fStatus').value, dueDate:dueDate, dueTime:dueTime, recurrence:$('fRec').value, alarm:alarm,
+      status:$('fStatus').value, dueDate:dueDate, dueTime:dueTime, recurrence:$('fRec').value, recurEnd:recEnd, alarm:alarm,
       notifyEmail:$('fNotifyEmail').checked, notifySms:$('fNotifySms').checked, highlight:$('fHighlight').checked,
       phone:$('fPhone').value.trim(), email:$('fEmail').value.trim(), address:$('fAddress').value.trim(),
       url:urls.length===1?urls[0]:'', urls:urls, subtasks:edSubtasks, notes:edNotes, photos:edPhotos, attachments:edAttachments,
@@ -1125,7 +1131,7 @@ function makeRecurringChild(src, dueDate){
     description:src.description||'', status:'To Do', dueDate:dueDate, dueTime:src.dueTime||'',
     url:src.url||'', urls:(src.urls||[]).slice(), phone:src.phone||'', email:src.email||'', address:src.address||'',
     alarm:nextAlarmFor(src,dueDate), alarmFired:false, recurrence:src.recurrence,
-    seriesId:src.seriesId, anchorDay:src.anchorDay||dayOf(src.dueDate),
+    seriesId:src.seriesId, anchorDay:src.anchorDay||dayOf(src.dueDate), recurEnd:src.recurEnd||'',
     notifyEmail:src.notifyEmail!==false, notifySms:src.notifySms===true, assignee:src.assignee||'',
     estimatedCost:src.estimatedCost||0, actualCost:src.actualCost||0, subtasks:[], notes:[], photos:[], createdAt:today() });
 }
@@ -1143,6 +1149,17 @@ function existingFutureDates(src){
   });
   return set;
 }
+function pruneSeriesAfter(src){
+  // When a recurrence end date is set/shortened, drop already-generated occurrences of the
+  // same series that fall AFTER it (tombstoned so the removal syncs to other devices).
+  if(!src.recurEnd || src.recurrence==='none') return 0;
+  if(!Array.isArray(data.deletedItemIds)) data.deletedItemIds=[];
+  var end=src.recurEnd, removed=[];
+  data.items.forEach(function(x){ if(x.id!==src.id && sameSeries(x, src) && x.dueDate && x.dueDate>end) removed.push(x); });
+  removed.forEach(function(x){ if(data.deletedItemIds.indexOf(x.id)===-1) data.deletedItemIds.push(x.id); idbPut(x.id,null); idbPut('att__'+x.id,null); });
+  if(removed.length) data.items=data.items.filter(function(x){ return removed.indexOf(x)===-1; });
+  return removed.length;
+}
 function generateRecurringBatch(src){
   if(!src.dueDate || src.recurrence==='none') return;
   var count=REC_COUNT[src.recurrence]||0; if(!count) return;
@@ -1150,10 +1167,11 @@ function generateRecurringBatch(src){
   // Clamp to today: never fabricate past-dated "overdue" occurrences, and guarantee
   // `count` genuinely-future ones in a single pass (so fillMissingRecurrences won't
   // re-fire a fresh batch every load).
-  var t=today(), d=src.dueDate, made=0, guard=0;
+  var t=today(), end=src.recurEnd||'', d=src.dueDate, made=0, guard=0;
   while(made<count && guard<2000){
     guard++;
     d=calcNextDate(d, src.recurrence, src.anchorDay);
+    if(end && d>end) break;    // reached the series end date — stop generating
     if(d<t) continue;          // skip occurrences before today without consuming a slot
     if(have[d]) continue;
     data.items.push(makeRecurringChild(src, d)); have[d]=true; made++;
@@ -1164,10 +1182,10 @@ function regenerateRecurringTask(src){
   if(!src.dueDate || src.recurrence==='none') return;
   // Advance along the original cadence until strictly after today — a lapsed/overdue
   // task that gets completed must spawn a FUTURE next occurrence, not a past-dated one.
-  var t=today(), next=src.dueDate, guard=0;
+  var t=today(), end=src.recurEnd||'', next=src.dueDate, guard=0;
   do { next=calcNextDate(next, src.recurrence, src.anchorDay); guard++; } while(next<=t && guard<2000);
   var have=existingFutureDates(src);
-  if(next>t && !have[next]){ data.items.push(makeRecurringChild(src, next)); }
+  if(next>t && (!end || next<=end) && !have[next]){ data.items.push(makeRecurringChild(src, next)); }
   generateRecurringBatch(src);
 }
 function fillMissingRecurrences(){
