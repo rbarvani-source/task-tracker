@@ -1093,6 +1093,30 @@ function backfillSeries(){
   });
   return changed;
 }
+function backfillChecklists(){
+  // Recurring children were historically generated with an EMPTY checklist. Fill any future,
+  // never-edited, empty occurrence from its series' template checklist (the occurrence with
+  // the most items) so repeats carry the checkboxes. Non-destructive: skips Done/past
+  // occurrences, non-empty checklists, and any checklist a user has touched
+  // (it._fieldTs.subtasks present, incl. an intentional clear). Deterministic child-derived
+  // ids -> both devices fill identically and converge.
+  var groups={}, changed=false, t=today();
+  data.items.forEach(function(i){ if(i.recurrence&&i.recurrence!=='none'){ var k=seriesKey(i); (groups[k]=groups[k]||[]).push(i); } });
+  Object.keys(groups).forEach(function(k){
+    var arr=groups[k], tmpl=null;
+    arr.forEach(function(i){ var n=(i.subtasks||[]).length; if(n && (!tmpl || n>(tmpl.subtasks||[]).length || (n===(tmpl.subtasks||[]).length && i.id<tmpl.id))) tmpl=i; });
+    if(!tmpl) return;                                       // no checklist anywhere in this series
+    arr.forEach(function(i){
+      if(i===tmpl || i.status==='Done') return;
+      if((i.subtasks||[]).length) return;                  // only fill EMPTY checklists
+      if(i._fieldTs && i._fieldTs.subtasks) return;        // never auto-fill a user-edited (incl. cleared) checklist
+      if(!i.dueDate || i.dueDate<t) return;                // only today/future occurrences
+      i.subtasks=(tmpl.subtasks||[]).map(function(s,idx){ return { id:i.id+'_s'+idx, text:s.text, done:false }; });
+      changed=true;
+    });
+  });
+  return changed;
+}
 function calcNextDate(dateStr, rec, anchorDay){
   var d=new Date(dateStr+'T00:00:00');
   if(rec==='daily'){ d.setDate(d.getDate()+1); }
@@ -1133,7 +1157,9 @@ function makeRecurringChild(src, dueDate){
     alarm:nextAlarmFor(src,dueDate), alarmFired:false, recurrence:src.recurrence,
     seriesId:src.seriesId, anchorDay:src.anchorDay||dayOf(src.dueDate), recurEnd:src.recurEnd||'',
     notifyEmail:src.notifyEmail!==false, notifySms:src.notifySms===true, assignee:src.assignee||'',
-    estimatedCost:src.estimatedCost||0, actualCost:src.actualCost||0, subtasks:[], notes:[], photos:[], createdAt:today() });
+    estimatedCost:src.estimatedCost||0, actualCost:src.actualCost||0,
+    subtasks:(src.subtasks||[]).map(function(s){ return {id:genId(), text:s.text, done:false}; }),  // each repeat carries the checklist, reset to unchecked
+    notes:[], photos:[], createdAt:today() });
 }
 function existingFutureDates(src){
   // Match occurrences of the SAME SERIES (by seriesId when present; name-tuple for legacy
@@ -1361,7 +1387,9 @@ var _searchTimer=null; function onSearch(){ if(_searchTimer) clearTimeout(_searc
   // Photos must be attached BEFORE any cloud push, or a push could ship empty photos.
   loadPhotos().then(function(){
     renderList();
-    if(backfillSeries()) save();   // give legacy recurring series a stable seriesId + anchorDay (deterministic, convergent)
+    var _bs=backfillSeries();      // legacy recurring series -> stable seriesId + anchorDay (deterministic, convergent)
+    var _bc=backfillChecklists();  // give existing empty repeats their series' checklist items
+    if(_bs||_bc) save();
     fillMissingRecurrences();
     if(syncKey){ setSyncUI('busy','Connecting…'); pull().then(function(){ setTimeout(replayOfflineQueue,3000); }); }
     else setSyncUI('', 'Sync');
