@@ -117,7 +117,9 @@
   .sublist{list-style:none; margin:0; padding:0}
   .sublist li{display:flex; align-items:center; gap:8px; padding:6px 0}
   .sublist li input[type=text]{flex:1; border-color:transparent; background:transparent; padding:8px 6px}
-  #fSubs{min-height:110px}
+  #fSubs{min-height:110px; max-height:220px; overflow-y:auto}
+  #fUrls{max-height:140px; overflow-y:auto}
+  #fAddress{overflow-x:auto}
   .sublist li textarea.st-text{flex:1; min-width:0; border:1px solid transparent; background:transparent; padding:8px 6px; resize:none; font-family:inherit; font-size:14px; color:var(--text); border-radius:6px; line-height:1.4; overflow:hidden}
   .sublist li textarea.st-text:focus{border-color:var(--accent); background:var(--input-bg)}
   .st-handle{flex:0 0 auto; cursor:grab; color:var(--text3); padding:0 2px; user-select:none; font-size:15px; line-height:1}
@@ -127,7 +129,7 @@
   .sublist .del{background:none; border:none; color:var(--text3); font-size:16px}
   .addrow{display:flex; gap:6px; margin-top:6px}
   .addrow input{flex:1}
-  .notes-list{list-style:none; margin:0; padding:0}
+  .notes-list{list-style:none; margin:0; padding:0; max-height:200px; overflow-y:auto}
   .notes-list li{background:#fffbea; border-left:3px solid var(--warn); padding:7px 9px; border-radius:6px; margin-bottom:6px}
   [data-theme="dark"] .notes-list li{background:#3a3620}
   .notes-list .nmeta{font-size:11px; color:var(--text3); margin-top:3px; display:flex; gap:10px}
