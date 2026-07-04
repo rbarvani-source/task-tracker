@@ -132,8 +132,12 @@
   .notes-list{list-style:none; margin:0; padding:0; max-height:200px; overflow-y:auto}
   .notes-list li{background:#fffbea; border-left:3px solid var(--warn); padding:7px 9px; border-radius:6px; margin-bottom:6px}
   [data-theme="dark"] .notes-list li{background:#3a3620}
-  .notes-list .nmeta{font-size:11px; color:var(--text3); margin-top:3px; display:flex; gap:10px}
-  .notes-list .nmeta button{background:none; border:none; color:var(--text3); font-size:12px; padding:0}
+  .notes-list .note-text{width:100%; border:1px solid transparent; background:transparent; padding:3px 5px; resize:none; font-family:inherit; font-size:13px; color:var(--text); border-radius:6px; line-height:1.4; overflow:hidden}
+  .notes-list .note-text:focus{border-color:var(--accent); background:var(--input-bg)}
+  .notes-list .nmeta{font-size:11px; color:var(--text3); margin-top:3px; display:flex; gap:10px; align-items:center}
+  .notes-list .nmeta button{background:none; border:none; color:var(--text3); font-size:12px; padding:0; cursor:pointer}
+  .notes-list .nmeta .nmove{font-size:14px; line-height:1; padding:2px 4px}
+  .notes-list .nmeta button:disabled{opacity:.3; cursor:default}
   .photos{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
   .photos .ph{position:relative; width:64px; height:64px}
   .photos .ph img{width:64px; height:64px; object-fit:cover; border-radius:8px; cursor:pointer}
@@ -922,11 +926,18 @@ function subDrop(e,targetIdx){
   _dragSubIdx=-1; renderSubs();
 }
 function renderNotes(){
-  $('fNotes').innerHTML = edNotes.slice().reverse().map(function(n){
-    var real = edNotes.indexOf(n);
-    return '<li><div>'+esc(n.text)+'</div><div class="nmeta"><span>'+esc(n.date||'')+'</span>'
-      +'<button type="button" onclick="edNotes.splice('+real+',1);renderNotes()">delete</button></div></li>';
+  $('fNotes').innerHTML = edNotes.map(function(n,i){
+    return '<li>'
+      +'<textarea class="note-text" rows="1" oninput="edNotes['+i+'].text=this.value" onfocus="this.rows=4" onblur="this.rows=1">'+esc(n.text)+'</textarea>'
+      +'<div class="nmeta"><span>'+esc(n.date||'')+'</span>'
+      +'<button type="button" class="nmove" title="Move up" style="margin-left:auto" '+(i===0?'disabled':'')+' onmousedown="event.preventDefault()" onclick="moveNote('+i+',-1)">&#8593;</button>'
+      +'<button type="button" class="nmove" title="Move down" '+(i===edNotes.length-1?'disabled':'')+' onmousedown="event.preventDefault()" onclick="moveNote('+i+',1)">&#8595;</button>'
+      +'<button type="button" onmousedown="event.preventDefault()" onclick="edNotes.splice('+i+',1);renderNotes()">delete</button></div></li>';
   }).join('');
+}
+function moveNote(i, dir){
+  var j=i+dir; if(j<0||j>=edNotes.length) return;
+  var t=edNotes[i]; edNotes[i]=edNotes[j]; edNotes[j]=t; renderNotes();
 }
 function addNote(){ var v=$('fNoteNew').value.trim(); if(!v) return; edNotes.push({id:genId(),text:v,date:today(),timestamp:new Date().toISOString()}); $('fNoteNew').value=''; renderNotes(); }
 function renderPhotos(){
