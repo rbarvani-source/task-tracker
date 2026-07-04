@@ -300,7 +300,7 @@
   <div class="modal">
     <h2>Daily Backups</h2>
     <div class="body"><div id="backupList"></div>
-      <p style="font-size:12px; color:var(--text3)">A photo-free snapshot is saved automatically once per day (last 3 kept). Restoring replaces all current data on this device.</p>
+      <p style="font-size:12px; color:var(--text3)">A photo-free snapshot is saved automatically once per day (latest kept). Your cloud sync is the full backup. Restoring replaces all current data on this device.</p>
     </div>
     <div class="foot"><button class="btn sec" onclick="closeModal('backupOverlay')">Done</button></div>
   </div>
@@ -509,6 +509,13 @@ function compressImage(file, cb){
 
 /* ============================ persistence ============================ */
 function stripPhotos(k,v){ return (k==='photos' || k==='attachments') ? [] : v; }
+// Local-only snapshots (daily backup + offline queue) are convenience copies, so drop bulky
+// non-essential fields to keep localStorage under iOS Safari's ~5MB cap. Backups also drop the
+// ~0.5MB _fieldTs (restoreBackup re-stamps every field fresh, so it's dead weight there); the
+// offline queue KEEPS _fieldTs so a failed-push replay still merges at field level. Both drop the
+// UI-less movements audit log (cloud-retained, re-unioned on the next pull).
+function stripBackup(k,v){ if(k==='photos'||k==='attachments') return []; if(k==='_fieldTs'||k==='movements') return undefined; return v; }
+function stripQueue(k,v){ if(k==='photos'||k==='attachments') return []; if(k==='movements') return undefined; return v; }
 // Keep only the most-recent MAX_MOVEMENTS audit records so this (UI-less) array can't grow
 // without bound and re-fill localStorage. Applied at load, save, merge, and push so local and
 // cloud converge to the same bounded set (a union/adopt re-expands it, then this re-trims).
@@ -540,10 +547,12 @@ function rebuildSnapshots(){ _lastSnap={}; data.items.forEach(function(it){ _las
 function safeSet(key,val){
   try{ localStorage.setItem(key,val); return true; }
   catch(e){
-    // free space: offline queue, then old backups
-    try{ localStorage.removeItem(STORAGE_KEY+'_offlineQueue'); }catch(_){}
+    // Free space: evict OLD BACKUPS FIRST (pure convenience copies) and retry; only drop the
+    // offline queue as a last resort — it may hold the sole off-cloud record of an unsynced edit.
     Object.keys(localStorage).forEach(function(k){ if(k.indexOf(STORAGE_KEY+'_backup_')===0) localStorage.removeItem(k); });
-    try{ localStorage.setItem(key,val); return true; }catch(e2){ toast('Local storage full'); return false; }
+    try{ localStorage.setItem(key,val); return true; }catch(e2){}
+    try{ localStorage.removeItem(STORAGE_KEY+'_offlineQueue'); }catch(_){}
+    try{ localStorage.setItem(key,val); return true; }catch(e3){ toast('Local storage full'); return false; }
   }
 }
 var _saveTimer=null;
@@ -647,8 +656,10 @@ function pull(fromPush){
   syncing=true; setSyncUI('busy','Pulling…');
   return fetchT(WORKER+'/sync?key='+encodeURIComponent(syncKey)+'&_t='+Date.now()).then(function(r){ return r.text().then(function(t){ return {r:r,t:t}; }); })
   .then(function(o){
+    var rOk=o.r.ok, rStatus=o.r.status;                     // recapture BEFORE releasing o (the next line reads o.r)
     var res; try{ res=JSON.parse(o.t); }catch(e){ throw new Error('Bad response'); }
-    if(!o.r.ok) throw new Error(res.error||('HTTP '+o.r.status));
+    o=null;                                                  // release the ~7MB response string for GC before the merge
+    if(!rOk) throw new Error(res.error||('HTTP '+rStatus));
     var cv=res.version||0, cd=res.data;
     if(!cd || !cd.items){
       // Cloud has nothing but we have tasks locally — back them up (whether or not
@@ -657,8 +668,8 @@ function pull(fromPush){
       setSyncUI('ok','Cloud is empty'); syncing=false; return;
     }
     var dirty=isDirty(), replaced=false;
-    if(!dirty && cv>serverVersion){ data=mergeAdopt(cd); replaced=true; }
-    else if(dirty){ data=mergeData(data, cd); }
+    if(!dirty && cv>serverVersion){ data=null; data=mergeAdopt(cd); replaced=true; }  // free old graph (clean-adopt path only)
+    else if(dirty){ data=mergeData(data, cd); }             // do NOT null data here — mergeData reads local unsynced edits
     else { setSyncUI('ok','Up to date (v'+cv+')'); syncing=false; return; }
     afterPull(cv, replaced);
     syncing=false;
@@ -707,9 +718,12 @@ function push(){
     });
   }
   return attempt().catch(function(e){
-    try{ var q=JSON.parse(localStorage.getItem(STORAGE_KEY+'_offlineQueue')||'[]');
-      q.push({timestamp:new Date().toISOString(), data:JSON.parse(JSON.stringify(data,stripPhotos))}); if(q.length>5) q=q.slice(-5);
-      localStorage.setItem(STORAGE_KEY+'_offlineQueue', JSON.stringify(q)); }catch(_){}
+    // Keep only the LATEST snapshot (replayOfflineQueue replays just the last one) and write it
+    // via safeSet so a quota miss evicts stale backups instead of silently dropping the edit.
+    try{
+      var snap={timestamp:new Date().toISOString(), data:JSON.parse(JSON.stringify(data,stripQueue))};
+      safeSet(STORAGE_KEY+'_offlineQueue', JSON.stringify([snap]));
+    }catch(_){}
     setSyncUI('err','Sync failed: '+e.message); syncing=false;
   });
 }
@@ -1380,9 +1394,9 @@ function restoreBackup(key){
 function autoBackup(){
   var key=STORAGE_KEY+'_backup_'+today();
   if(localStorage.getItem(key)) return;
-  try{ safeSet(key, JSON.stringify(data, stripPhotos)); }catch(e){ return; }
+  try{ safeSet(key, JSON.stringify(data, stripBackup)); }catch(e){ return; }
   var keys=Object.keys(localStorage).filter(function(k){return k.indexOf(STORAGE_KEY+'_backup_')===0;}).sort();
-  while(keys.length>3){ localStorage.removeItem(keys.shift()); }
+  while(keys.length>1){ localStorage.removeItem(keys.shift()); }  // keep only the most-recent local backup (cloud KV is the durable store)
 }
 function toggleDark(){
   var dark = document.documentElement.getAttribute('data-theme')!=='dark';
