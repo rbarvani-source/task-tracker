@@ -1393,10 +1393,13 @@ function restoreBackup(key){
 }
 function autoBackup(){
   var key=STORAGE_KEY+'_backup_'+today();
-  if(localStorage.getItem(key)) return;
-  try{ safeSet(key, JSON.stringify(data, stripBackup)); }catch(e){ return; }
+  if(!localStorage.getItem(key)){
+    try{ safeSet(key, JSON.stringify(data, stripBackup)); }catch(e){}
+  }
+  // Always prune to the newest 1 — even when today's backup already exists — so a device that
+  // accumulated old (pre-fix) daily backups reclaims that space on the very next open.
   var keys=Object.keys(localStorage).filter(function(k){return k.indexOf(STORAGE_KEY+'_backup_')===0;}).sort();
-  while(keys.length>1){ localStorage.removeItem(keys.shift()); }  // keep only the most-recent local backup (cloud KV is the durable store)
+  while(keys.length>1){ localStorage.removeItem(keys.shift()); }  // cloud KV is the durable backup
 }
 function toggleDark(){
   var dark = document.documentElement.getAttribute('data-theme')!=='dark';
