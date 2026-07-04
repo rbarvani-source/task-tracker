@@ -182,7 +182,7 @@
 </header>
 
 <div class="toolbar">
-  <input type="search" id="search" placeholder="Search tasks…" oninput="onSearch()">
+  <input type="search" id="search" placeholder="Search all fields…" oninput="onSearch()">
   <select id="filterCat" onchange="renderList()"></select>
   <select id="sortOrder" onchange="renderList()">
     <option value="date-time" selected>Sort: Date → Time</option>
@@ -752,12 +752,26 @@ function fmtDue(it){
   if(it.dueTime) s+=' '+new Date(it.dueDate+'T'+it.dueTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   return s;
 }
+// All searchable text of an item, concatenated (fields separated by \n so a query can't
+// accidentally match across a field boundary).
+function itemSearchText(i){
+  var parts=[i.name, i.description, i.status, i.assignee, i.phone, i.email, i.address, i.dueDate, i.dueTime, i.recurrence, i.recurEnd, i.alarm, i.estimatedCost, i.actualCost];
+  var p=getProperty(i.propertyId); if(p) parts.push(p.name);                       // category name
+  var urls=getItemUrls(i); if(urls.length) parts.push(urls.join(' '));
+  if(i.subtasks&&i.subtasks.length) parts.push(i.subtasks.map(function(s){return s&&s.text;}).join(' '));  // checklist
+  if(i.notes&&i.notes.length) parts.push(i.notes.map(function(n){return (n&&n.text)?n.text:n;}).join(' ')); // notes
+  return parts.join('\n').toLowerCase();
+}
 function computeView(){
   var q=($('search').value||'').toLowerCase().trim();
   var cf=$('filterCat').value;
+  var terms = q ? q.split(/\s+/).filter(Boolean) : [];
   var items=data.items.filter(function(i){
     if(cf && i.propertyId!==cf) return false;
-    if(q && (i.name||'').toLowerCase().indexOf(q)===-1 && (i.description||'').toLowerCase().indexOf(q)===-1) return false;
+    if(terms.length){
+      var hay=itemSearchText(i);
+      for(var ti=0;ti<terms.length;ti++){ if(hay.indexOf(terms[ti])===-1) return false; }  // every term must appear in some field
+    }
     return true;
   });
   var order=$('sortOrder').value;
