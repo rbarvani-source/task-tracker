@@ -79,6 +79,13 @@
   a.badge.linkbadge{background:#e8f0fe; color:#1a73e8; text-decoration:none; cursor:pointer; max-width:160px; overflow:hidden; text-overflow:ellipsis}
   a.badge.linkbadge:hover{background:#d2e3fc; text-decoration:underline}
   [data-theme="dark"] a.badge.linkbadge{background:#28324a; color:#8ab4f8}
+  a.badge.callbadge{background:#e6f4ea; color:#137333; text-decoration:none; cursor:pointer; max-width:170px; overflow:hidden; text-overflow:ellipsis}
+  a.badge.callbadge:hover{background:#ceead6; text-decoration:underline}
+  [data-theme="dark"] a.badge.callbadge{background:#1f3a28; color:#7fd99a}
+  .fieldact{font-weight:400; text-transform:none; color:var(--accent); font-size:11px; margin-left:8px; text-decoration:none}
+  .fieldact:hover{text-decoration:underline}
+  .urlchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+  .urlchips:empty{display:none}
   .due{flex:0 0 auto}
   .due.overdue{color:var(--danger); font-weight:600} .due.due-soon{color:var(--warn); font-weight:600}
   .stat{flex:0 0 auto; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:6px}
@@ -232,11 +239,11 @@
         <input type="file" id="fPhotoInput" accept="image/*,application/pdf,.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple style="display:none">
       </div>
       <div class="row2">
-        <div class="fld"><label>Phone</label><input type="tel" id="fPhone"></div>
-        <div class="fld"><label>Email</label><input type="email" id="fEmail"></div>
+        <div class="fld"><label>Phone <a id="fPhoneAct" class="fieldact" style="display:none" target="_self">&#128222; call</a></label><input type="tel" id="fPhone" oninput="updateFieldActs()"></div>
+        <div class="fld"><label>Email <a id="fEmailAct" class="fieldact" style="display:none" target="_self">&#9993; email</a></label><input type="email" id="fEmail" oninput="updateFieldActs()"></div>
       </div>
       <div class="fld"><label>Address</label><input type="text" id="fAddress"></div>
-      <div class="fld"><label>Links (one URL per line)</label><textarea id="fUrls" rows="1" placeholder="https://…" onfocus="this.rows=5" onblur="this.rows=1"></textarea></div>
+      <div class="fld"><label>Links (one URL per line)</label><textarea id="fUrls" rows="1" placeholder="https://…" onfocus="this.rows=5" onblur="this.rows=1" oninput="renderUrlChips()"></textarea><div id="fUrlChips" class="urlchips"></div></div>
       <div class="row2">
         <div class="fld"><label>Category</label><select id="fCat"></select></div>
         <div class="fld"><label>Status</label><select id="fStatus">
@@ -817,6 +824,7 @@ function rowHtml(it,i){
   if(it.notes && it.notes.length) badges+='<span class="badge">&#128221; '+it.notes.length+'</span>';
   if(it.photos && it.photos.length) badges+='<span class="badge">&#128247; '+it.photos.length+'</span>';
   if(it.attachments && it.attachments.length) badges+='<span class="badge">&#128206; '+it.attachments.length+'</span>';
+  if(it.phone){ var tel=String(it.phone).replace(/[^0-9+*#,;]/g,''); if(tel) badges+='<a class="badge callbadge" href="tel:'+esc(tel)+'" title="Call '+esc(it.phone)+'" onclick="event.stopPropagation()">&#128222; '+esc(it.phone)+'</a>'; }
   var urls=getItemUrls(it);
   for(var u=0;u<urls.length;u++){
     if(!urls[u]) continue;
@@ -905,6 +913,7 @@ function openEditor(id){
   $('fEmail').value = it?it.email||'':'';
   $('fAddress').value = it?it.address||'':'';
   $('fUrls').value = it?getItemUrls(it).join('\n'):'';
+  updateFieldActs(); renderUrlChips();
   edSubtasks = it ? (it.subtasks||[]).map(function(s){ return {id:s.id||genId(), text:s.text, done:!!s.done}; }) : [];
   edNotes = it ? (it.notes||[]).map(function(n){ return Object.assign({}, n); }) : [];
   edPhotos = it ? (it.photos||[]).slice() : [];
@@ -919,6 +928,20 @@ function closeEditor(){ closeModal('editorOverlay'); editingId=null; revokeBlobs
 function revokeBlobs(){ Object.keys(_blobCache).forEach(function(k){ try{ URL.revokeObjectURL(_blobCache[k]); }catch(e){} }); _blobCache={}; }
 /* onDueChange removed — changing the due date no longer auto-populates the alarm */
 function onRecChange(){ $('fRecEndWrap').style.display = ($('fRec').value!=='none') ? '' : 'none'; }
+// Make the editor's phone/email tappable (tel:/mailto:) and its links openable, so a task's
+// contact info is clickable on the iPhone even though the fields stay editable.
+function updateFieldActs(){
+  var p=$('fPhone').value.trim().replace(/[^0-9+*#,;]/g,''), e=$('fEmail').value.trim();
+  var pa=$('fPhoneAct'), ea=$('fEmailAct');
+  if(p){ pa.href='tel:'+p; pa.style.display=''; } else pa.style.display='none';
+  if(e){ ea.href='mailto:'+encodeURIComponent(e); ea.style.display=''; } else ea.style.display='none';
+}
+function renderUrlChips(){
+  var lines=$('fUrls').value.split('\n').map(function(s){return s.trim();}).filter(Boolean);
+  $('fUrlChips').innerHTML = lines.map(function(u){
+    return '<a class="badge linkbadge" href="'+esc(safeHref(u))+'" target="_blank" rel="noopener">&#128279; '+esc(urlLabel(u))+'</a>';
+  }).join('');
+}
 function renderSubs(){
   $('fSubs').innerHTML = edSubtasks.map(function(s,i){
     return '<li draggable="false" ondragover="subDragOver(event)" ondrop="subDrop(event,'+i+')">'
