@@ -1500,7 +1500,7 @@ var _searchTimer=null; function onSearch(){ if(_searchTimer) clearTimeout(_searc
     var l=document.createElement('link'); l.rel='icon'; l.id='favicon'; l.type='image/png'; l.href=href; document.head.appendChild(l);
   }
   function tick(){ setIcon(frames[i]); i=i?0:1; }
-  tick(); setInterval(tick, 350);
+  tick(); setInterval(tick, 200);
 })();
 </script>
 </body>
