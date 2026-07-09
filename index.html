@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#1a73e8">
 <title>Task Tracker</title>
 <link rel="manifest" href="./manifest.json">
+<link rel="icon" id="favicon" type="image/png" href="./icon-192.png">
 <style>
   :root{
     --bg:#f0f2f5; --card:#fff; --text:#1a1a2e; --text2:#555; --text3:#888;
@@ -1473,6 +1474,33 @@ var _searchTimer=null; function onSearch(){ if(_searchTimer) clearTimeout(_searc
   // one-time cleanup of the old heavy app's service worker + caches (prevents stale serving)
   if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }); }
   if(window.caches && caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }); }
+})();
+
+/* ===================== attention-grabbing blinking tab favicon =====================
+   Draws a bright rounded-square check icon on a canvas and blinks the tab between two
+   high-saturation colors (yellow <-> red) so this tab is easy to spot among many open
+   tabs. Only two data-URLs are ever generated (cached); the timer just swaps the icon.
+   Uses remove-then-add of the <link> each tick — the reliable way to force Chromium/Brave
+   to actually refresh the tab icon. */
+(function(){
+  function draw(bg,fg){
+    var c=document.createElement('canvas'); c.width=64; c.height=64;
+    var x=c.getContext&&c.getContext('2d'); if(!x) return null;
+    var r=14; x.beginPath();
+    x.moveTo(2+r,2); x.arcTo(62,2,62,62,r); x.arcTo(62,62,2,62,r); x.arcTo(2,62,2,2,r); x.arcTo(2,2,62,2,r); x.closePath();
+    x.fillStyle=bg; x.fill();
+    x.strokeStyle=fg; x.lineWidth=9; x.lineCap='round'; x.lineJoin='round';
+    x.beginPath(); x.moveTo(15,34); x.lineTo(28,47); x.lineTo(50,18); x.stroke();
+    try{ return c.toDataURL('image/png'); }catch(e){ return null; }
+  }
+  var frames=[draw('#FFEA00','#111'), draw('#FF1744','#ffffff')], i=0;
+  if(!frames[0] || !frames[1]) return;               // canvas unavailable -> keep the static icon
+  function setIcon(href){
+    var old=document.getElementById('favicon'); if(old && old.parentNode) old.parentNode.removeChild(old);
+    var l=document.createElement('link'); l.rel='icon'; l.id='favicon'; l.type='image/png'; l.href=href; document.head.appendChild(l);
+  }
+  function tick(){ setIcon(frames[i]); i=i?0:1; }
+  tick(); setInterval(tick, 700);
 })();
 </script>
 </body>
