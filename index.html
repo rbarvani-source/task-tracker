@@ -1478,7 +1478,7 @@ var _searchTimer=null; function onSearch(){ if(_searchTimer) clearTimeout(_searc
 
 /* ===================== attention-grabbing blinking tab favicon =====================
    Draws a bright rounded-square check icon on a canvas and blinks the tab between two
-   high-saturation colors (yellow <-> red) so this tab is easy to spot among many open
+   high-saturation colors (magenta <-> cyan) so this tab is easy to spot among many open
    tabs. Only two data-URLs are ever generated (cached); the timer just swaps the icon.
    Uses remove-then-add of the <link> each tick — the reliable way to force Chromium/Brave
    to actually refresh the tab icon. */
@@ -1493,14 +1493,14 @@ var _searchTimer=null; function onSearch(){ if(_searchTimer) clearTimeout(_searc
     x.beginPath(); x.moveTo(15,34); x.lineTo(28,47); x.lineTo(50,18); x.stroke();
     try{ return c.toDataURL('image/png'); }catch(e){ return null; }
   }
-  var frames=[draw('#FFEA00','#111'), draw('#FF1744','#ffffff')], i=0;
+  var frames=[draw('#FF00FF','#ffffff'), draw('#00FFFF','#00363d')], i=0;
   if(!frames[0] || !frames[1]) return;               // canvas unavailable -> keep the static icon
   function setIcon(href){
     var old=document.getElementById('favicon'); if(old && old.parentNode) old.parentNode.removeChild(old);
     var l=document.createElement('link'); l.rel='icon'; l.id='favicon'; l.type='image/png'; l.href=href; document.head.appendChild(l);
   }
   function tick(){ setIcon(frames[i]); i=i?0:1; }
-  tick(); setInterval(tick, 700);
+  tick(); setInterval(tick, 350);
 })();
 </script>
 </body>
