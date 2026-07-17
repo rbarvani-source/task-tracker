@@ -64,6 +64,12 @@
   .row:hover{border-color:var(--border2)}
   .row.hl{background:#fff8e1; box-shadow:inset 4px 0 0 #f9ab00, var(--shadow)}
   [data-theme="dark"] .row.hl{background:#3a3420}
+  /* critical: outranks highlight — brighter yellow + slow pulse (defined after .hl so it wins when both are set) */
+  @keyframes critPulse{0%,100%{background:#ffd600}50%{background:#fff9a8}}
+  @keyframes critPulseDark{0%,100%{background:#5c4d00}50%{background:#847000}}
+  .row.crit{background:#ffd600; box-shadow:inset 4px 0 0 #d93025, var(--shadow); animation:critPulse 1.6s ease-in-out infinite}
+  [data-theme="dark"] .row.crit{background:#5c4d00; animation:critPulseDark 1.6s ease-in-out infinite}
+  @media (prefers-reduced-motion: reduce){ .row.crit,[data-theme="dark"] .row.crit{animation:none} }
   .row .star{flex:0 0 auto; background:none; border:none; font-size:18px; color:var(--text3); cursor:pointer; padding:2px 4px; line-height:1}
   .row .star.on{color:#f9ab00} .row .star:hover{color:#f9ab00}
   .row .chk{width:22px; height:22px; flex:0 0 auto; cursor:pointer; accent-color:var(--ok)}
@@ -220,6 +226,7 @@
         <label class="chkline" style="margin:0"><input type="checkbox" id="fNotifyEmail" checked> Email reminder</label>
         <label class="chkline" style="margin:0"><input type="checkbox" id="fNotifySms"> Text reminder</label>
         <label class="chkline" style="margin:0"><input type="checkbox" id="fHighlight"> &#9733; Highlight</label>
+        <label class="chkline" style="margin:0"><input type="checkbox" id="fCritical"> &#8252; Critical</label>
       </div>
       <div class="fld"><label>Description</label><textarea id="fDesc" rows="2" onfocus="this.rows=6" onblur="this.rows=2"></textarea></div>
       <div class="fld">
@@ -333,7 +340,7 @@ var MAX_MOVEMENTS = 2000; // cap the (UI-less) audit log so the photo-free local
 var COLORS = ['#1a73e8','#e65100','#1e8e3e','#d93025','#9334e6','#00897b','#c2185b','#6d4c41'];
 var DEFAULT_CATEGORIES = ['Maintenance','Repair','Inspection','Renovation','Cleaning','Other'];
 var STATUS_CLASSES = {'To Do':'status-todo','In Progress':'status-in-progress','Done':'status-done','Blocked':'status-blocked'};
-var MERGE_FIELDS = ['name','category','propertyId','description','status','dueDate','dueTime','url','urls','phone','email','address','alarm','alarmFired','notifyEmail','notifySms','recurrence','recurEnd','assignee','estimatedCost','actualCost','escalated','escalationReminded','highlight'];
+var MERGE_FIELDS = ['name','category','propertyId','description','status','dueDate','dueTime','url','urls','phone','email','address','alarm','alarmFired','notifyEmail','notifySms','recurrence','recurEnd','assignee','estimatedCost','actualCost','escalated','escalationReminded','highlight','critical'];
 var REC_COUNT = {daily:30, weekly:12, monthly:12, quarterly:8, yearly:3};
 var ROW_H = 72, OVERSCAN = 6;
 
@@ -375,6 +382,7 @@ function normalizeItem(it){
   if(!Array.isArray(it.photos)) it.photos=[];
   if(!Array.isArray(it.attachments)) it.attachments=[];
   if(it.highlight===undefined) it.highlight=false;
+  if(it.critical===undefined) it.critical=false;
   if(it.alarm==null) it.alarm='';
   if(it.alarmFired===undefined) it.alarmFired=false;
   if(!it.recurrence) it.recurrence='none';
@@ -801,6 +809,7 @@ function computeView(){
   function pn(id){ var p=getProperty(id); return (p&&p.name!=null)?String(p.name).toLowerCase():'zzz'; }
   items.sort(function(a,b){
     var d=dn(a)-dn(b); if(d) return d;
+    var cr=(b.critical?1:0)-(a.critical?1:0); if(cr) return cr;   // critical outranks highlight
     var h=(b.highlight?1:0)-(a.highlight?1:0); if(h) return h;
     var da=a.dueDate||'9999-12-31', db=b.dueDate||'9999-12-31';
     if(order==='date-time'){ if(da!==db) return da<db?-1:1; return (a.dueTime||'99:99')<(b.dueTime||'99:99')?-1:1; }
@@ -813,7 +822,7 @@ function computeView(){
 }
 function rowHtml(it,i){
   var p=getProperty(it.propertyId);
-  var cls='row'+(it.status==='Done'?' done':'')+(it.highlight?' hl':'');
+  var cls='row'+(it.status==='Done'?' done':'')+(it.highlight?' hl':'')+(it.critical?' crit':'');
   var chip = p ? '<span class="chip" style="background:'+esc(sanitizeColor(p.color))+'">'+esc(p.name)+'</span>' : '';
   var ds=dueStatus(it.dueDate);
   var due = it.dueDate ? '<span class="due '+ds+'">'+esc(fmtDue(it))+'</span>' : '';
@@ -909,6 +918,7 @@ function openEditor(id){
   $('fNotifyEmail').checked = it ? it.notifyEmail!==false : true;
   $('fNotifySms').checked = it ? it.notifySms===true : false;
   $('fHighlight').checked = it ? !!it.highlight : false;
+  $('fCritical').checked = it ? !!it.critical : false;
   $('fDesc').value = it?it.description||'':'';
   $('fPhone').value = it?it.phone||'':'';
   $('fEmail').value = it?it.email||'':'';
@@ -1056,7 +1066,7 @@ function saveEditor(){
     var wasStatus=it.status;
     it.name=name; it.propertyId=propId; it.status=$('fStatus').value;
     it.dueDate=dueDate; it.dueTime=dueTime; it.recurrence=$('fRec').value; it.recurEnd=recEnd; it.alarm=alarm;
-    it.notifyEmail=$('fNotifyEmail').checked; it.notifySms=$('fNotifySms').checked; it.highlight=$('fHighlight').checked;
+    it.notifyEmail=$('fNotifyEmail').checked; it.notifySms=$('fNotifySms').checked; it.highlight=$('fHighlight').checked; it.critical=$('fCritical').checked;
     it.description=$('fDesc').value; it.phone=$('fPhone').value.trim(); it.email=$('fEmail').value.trim();
     it.address=$('fAddress').value.trim(); it.urls=urls; it.url=urls.length===1?urls[0]:'';
     var _nowLE=Date.now();   // stamp per-list change time so the merge can keep the newer (e.g. shorter/deleted) list
@@ -1071,7 +1081,7 @@ function saveEditor(){
   } else {
     it=normalizeItem({ id:genId(), name:name, propertyId:propId, category:'', description:$('fDesc').value,
       status:$('fStatus').value, dueDate:dueDate, dueTime:dueTime, recurrence:$('fRec').value, recurEnd:recEnd, alarm:alarm,
-      notifyEmail:$('fNotifyEmail').checked, notifySms:$('fNotifySms').checked, highlight:$('fHighlight').checked,
+      notifyEmail:$('fNotifyEmail').checked, notifySms:$('fNotifySms').checked, highlight:$('fHighlight').checked, critical:$('fCritical').checked,
       phone:$('fPhone').value.trim(), email:$('fEmail').value.trim(), address:$('fAddress').value.trim(),
       url:urls.length===1?urls[0]:'', urls:urls, subtasks:edSubtasks, notes:edNotes, photos:edPhotos, attachments:edAttachments,
       assignee:'', estimatedCost:0, actualCost:0, createdAt:today() });
