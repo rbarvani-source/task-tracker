@@ -90,6 +90,9 @@
   a.badge.callbadge:hover{background:#ceead6; text-decoration:underline}
   [data-theme="dark"] a.badge.callbadge{background:#1f3a28; color:#7fd99a}
   .fieldact{font-weight:400; text-transform:none; color:var(--accent); font-size:11px; margin-left:8px; text-decoration:none}
+  .timechips{display:flex; flex-wrap:wrap; gap:5px; margin-top:6px}
+  .timechips button{background:var(--hover); border:1px solid var(--border2); border-radius:14px; padding:3px 10px; font-size:12px; color:var(--text2); cursor:pointer}
+  .timechips button:hover{background:var(--accent); border-color:var(--accent); color:#fff}
   .fieldact:hover{text-decoration:underline}
   .urlchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
   .urlchips:empty{display:none}
@@ -219,8 +222,17 @@
     <div class="body">
       <div class="fld"><label>Task Name</label><textarea id="fName" rows="1" placeholder="What needs doing?" onfocus="this.rows=5" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></textarea></div>
       <div class="row2">
-        <div class="fld"><label>Due Date &amp; Time</label><input type="datetime-local" id="fDue"></div>
-        <div class="fld"><label>Alarm <a href="#" onclick="event.preventDefault();document.getElementById('fAlarm').value=''" style="font-weight:400;text-transform:none;color:var(--accent);font-size:11px;margin-left:6px">clear</a></label><input type="datetime-local" id="fAlarm"></div>
+        <div class="fld"><label>Due Date &amp; Time</label><input type="datetime-local" id="fDue">
+          <div class="timechips">
+            <button type="button" onclick="setDueTime('08:00')">8 AM</button>
+            <button type="button" onclick="setDueTime('09:00')">9 AM</button>
+            <button type="button" onclick="setDueTime('12:00')">Noon</button>
+            <button type="button" onclick="setDueTime('13:00')">1 PM</button>
+            <button type="button" onclick="setDueTime('15:00')">3 PM</button>
+            <button type="button" onclick="setDueTime('17:00')">5 PM</button>
+          </div>
+        </div>
+        <div class="fld"><label>Alarm <a href="#" class="fieldact" style="margin-left:6px" onclick="event.preventDefault();copyDueToAlarm()" title="Copy the due date &amp; time into the alarm">&#8592; copy due</a> <a href="#" class="fieldact" style="margin-left:6px" onclick="event.preventDefault();document.getElementById('fAlarm').value=''">clear</a></label><input type="datetime-local" id="fAlarm"></div>
       </div>
       <div class="fld" style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
         <label class="chkline" style="margin:0"><input type="checkbox" id="fNotifyEmail" checked> Email reminder</label>
@@ -939,6 +951,19 @@ function closeEditor(){ closeModal('editorOverlay'); editingId=null; revokeBlobs
 function revokeBlobs(){ Object.keys(_blobCache).forEach(function(k){ try{ URL.revokeObjectURL(_blobCache[k]); }catch(e){} }); _blobCache={}; }
 /* onDueChange removed — changing the due date no longer auto-populates the alarm */
 function onRecChange(){ $('fRecEndWrap').style.display = ($('fRec').value!=='none') ? '' : 'none'; }
+// One-click time presets for the due field — Chromium's segmented datetime-local time
+// spinner is fiddly; a chip sets the time part directly (date defaults to today if unset).
+function setDueTime(hhmm){
+  var v=$('fDue').value;
+  var d = v ? v.substring(0,10) : today();
+  $('fDue').value = d+'T'+hhmm;
+}
+function copyDueToAlarm(){
+  var v=$('fDue').value;
+  if(!v){ toast('Set a due date first'); return; }
+  $('fAlarm').value = v.length>10 ? v : v+'T09:00';
+  toast('Alarm set to the due date & time');
+}
 // Make the editor's phone/email tappable (tel:/mailto:) and its links openable, so a task's
 // contact info is clickable on the iPhone even though the fields stay editable.
 function updateFieldActs(){
