@@ -982,7 +982,7 @@ function renderSubs(){
   $('fSubs').innerHTML = edSubtasks.map(function(s,i){
     return '<li draggable="false" ondragover="subDragOver(event)" ondrop="subDrop(event,'+i+')">'
       +'<span class="st-handle" draggable="true" ondragstart="subDragStart(event,'+i+')" ondragend="subDragEnd(event)" title="Drag to reorder">&#8597;</span>'
-      +'<input type="checkbox" '+(s.done?'checked':'')+' onclick="edSubtasks['+i+'].done=this.checked" style="width:18px;height:18px;accent-color:var(--ok)">'
+      +'<input type="checkbox" '+(s.done?'checked':'')+' onclick="toggleSub('+i+',this.checked)" style="width:18px;height:18px;accent-color:var(--ok)">'
       +'<textarea class="st-text" rows="1" oninput="edSubtasks['+i+'].text=this.value" onfocus="this.rows=3" onblur="this.rows=1" onkeydown="if(event.key===\'Enter\'&&!event.shiftKey){event.preventDefault();this.blur();}">'+esc(s.text)+'</textarea>'
       +'<button type="button" class="del" onmousedown="event.preventDefault()" onclick="edSubtasks.splice('+i+',1);renderSubs()">&times;</button></li>';
   }).join('');
@@ -994,6 +994,16 @@ function toggleSubs(){
   w.style.display = open ? '' : 'none';
   $('fSubsCaret').innerHTML = open ? '&#9662;' : '&#9656;';
   if(open){ var inp=$('fSubNew'); if(inp) setTimeout(function(){ inp.focus(); },30); }
+}
+// Checking a checklist item sinks it to the bottom (done items grouped at the end);
+// unchecking floats it back up just above the first done item. Order is otherwise preserved.
+function toggleSub(i, checked){
+  var it=edSubtasks[i]; if(!it) return;
+  it.done=checked;
+  edSubtasks.splice(i,1);
+  if(checked){ edSubtasks.push(it); }
+  else { var d=-1; for(var k=0;k<edSubtasks.length;k++){ if(edSubtasks[k].done){ d=k; break; } } if(d<0) edSubtasks.push(it); else edSubtasks.splice(d,0,it); }
+  renderSubs();
 }
 function addSub(){ var v=$('fSubNew').value.trim(); if(!v) return; edSubtasks.push({id:genId(),text:v,done:false}); $('fSubNew').value=''; renderSubs(); }
 var _dragSubIdx=-1;
