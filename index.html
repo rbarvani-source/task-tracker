@@ -105,8 +105,8 @@
   .fieldact:hover{text-decoration:underline}
   .urlchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
   .urlchips:empty{display:none}
-  .due{flex:0 0 auto}
-  .due.overdue{color:var(--danger); font-weight:600} .due.due-soon{color:var(--warn); font-weight:600}
+  .due{flex:0 0 auto; color:var(--text); font-weight:700; font-size:13.5px}
+  .due.overdue{color:var(--danger); font-weight:700} .due.due-soon{color:var(--warn); font-weight:700}
   .stat{flex:0 0 auto; font-size:11.5px; font-weight:600; padding:2px 8px; border-radius:6px}
   .status-todo{background:#e8eaed; color:#5f6368} .status-in-progress{background:#fef7e0; color:#b06000}
   .status-done{background:#e6f4ea; color:#137333} .status-blocked{background:#fce8e6; color:#c5221f}
@@ -738,7 +738,7 @@ function afterPull(cv, replaced){
   if(replaced) clearDirty();
   localStorage.setItem(STORAGE_KEY+'_lastSync', new Date().toISOString());
   populateCategorySelects(); renderList();
-  setSyncUI('ok', (replaced?'Pulled v':'Merged v')+cv+' · '+new Date().toLocaleTimeString());
+  setSyncUI('ok', (replaced?'Pulled v':'Merged v')+cv+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
 }
 function push(){
   if(!syncKey || syncing) return Promise.resolve();
@@ -757,7 +757,7 @@ function push(){
       if(!o.r.ok) throw new Error(res.error||('HTTP '+o.r.status));
       setSV(res.version); clearDirty(); localStorage.removeItem(STORAGE_KEY+'_offlineQueue');
       localStorage.setItem(STORAGE_KEY+'_lastSync', new Date().toISOString());
-      setSyncUI('ok','Synced v'+res.version+' · '+new Date().toLocaleTimeString());
+      setSyncUI('ok','Synced v'+res.version+' · '+new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}));
       syncing=false;
     });
   }
@@ -805,9 +805,8 @@ var view=[];
 function dueStatus(d){ if(!d) return ''; var n=new Date(); n.setHours(0,0,0,0); var due=new Date(d+'T00:00:00'); var diff=(due-n)/86400000; if(diff<0) return 'overdue'; if(diff<=3) return 'due-soon'; return ''; }
 function fmtDue(it){
   if(!it.dueDate) return '';
-  var dt=new Date(it.dueDate+'T'+((it.dueTime||'00:00')));
   var s=new Date(it.dueDate+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-  if(it.dueTime) s+=' '+new Date(it.dueDate+'T'+it.dueTime).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  if(it.dueTime) s+=' '+it.dueTime;   // dueTime is already canonical 24-hour "HH:MM" — no AM/PM conversion needed
   return s;
 }
 // All searchable text of an item, concatenated (fields separated by \n so a query can't
