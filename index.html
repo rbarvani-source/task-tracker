@@ -73,12 +73,9 @@
   #selBar #selCount{font-weight:600; font-size:13px; min-width:78px}
   .row.hl{background:#fff8e1; box-shadow:inset 4px 0 0 #f9ab00, var(--shadow)}
   [data-theme="dark"] .row.hl{background:#3a3420}
-  /* critical: outranks highlight — brighter yellow + slow pulse (defined after .hl so it wins when both are set) */
-  @keyframes critPulse{0%,100%{background:#ffd600}50%{background:#fff9a8}}
-  @keyframes critPulseDark{0%,100%{background:#5c4d00}50%{background:#847000}}
-  .row.crit{background:#ffd600; box-shadow:inset 4px 0 0 #d93025, var(--shadow); animation:critPulse 1.6s ease-in-out infinite}
-  [data-theme="dark"] .row.crit{background:#5c4d00; animation:critPulseDark 1.6s ease-in-out infinite}
-  @media (prefers-reduced-motion: reduce){ .row.crit,[data-theme="dark"] .row.crit{animation:none} }
+  /* critical: outranks highlight — static pale green (defined after .hl so it wins when both are set) */
+  .row.crit{background:#d7f5dd; box-shadow:inset 4px 0 0 #1e8e3e, var(--shadow)}
+  [data-theme="dark"] .row.crit{background:#1f3a28}
   .row .star{flex:0 0 auto; background:none; border:none; font-size:18px; color:var(--text3); cursor:pointer; padding:2px 4px; line-height:1}
   .row .star.on{color:#f9ab00} .row .star:hover{color:#f9ab00}
   .row .chk{width:22px; height:22px; flex:0 0 auto; cursor:pointer; accent-color:var(--ok)}
