@@ -282,7 +282,7 @@
       <div class="fld"><label>Address</label><input type="text" id="fAddress"></div>
       <div class="fld"><label>Links (one URL per line)</label><textarea id="fUrls" rows="1" placeholder="https://…" onfocus="this.rows=5" onblur="this.rows=1" oninput="renderUrlChips()"></textarea><div id="fUrlChips" class="urlchips"></div></div>
       <div class="row2">
-        <div class="fld"><label>Category</label><select id="fCat"></select></div>
+        <div class="fld"><label>Category <a href="#" class="fieldact" onclick="event.preventDefault();addCategoryInline()">+ new</a> <a href="#" class="fieldact" onclick="event.preventDefault();renameCatInline()">rename</a></label><select id="fCat"></select></div>
         <div class="fld"><label>Status</label><select id="fStatus">
           <option>To Do</option><option>In Progress</option><option>Done</option><option>Blocked</option>
         </select></div>
@@ -1494,6 +1494,18 @@ function addCategory(){
 function renameCat(id){ var p=getProperty(id); if(!p) return; var n=prompt('Rename category:', p.name); if(!n||!n.trim()) return; n=n.trim();
   if(data.properties.some(function(x){return x.id!==id&&x.name.toLowerCase()===n.toLowerCase();})){ toast('Name already used'); return; }
   p.name=n; p._lastModified=Date.now(); save(); renderCategories(); populateCategorySelects(); renderList(); }
+// Create/rename a category straight from the task editor's Category field.
+function addCategoryInline(){
+  var name=prompt('New category name:'); if(name===null) return; name=name.trim(); if(!name) return;
+  var existing=null; data.properties.forEach(function(p){ if((p.name||'').toLowerCase()===name.toLowerCase()) existing=p; });
+  if(existing){ populateCategorySelects(); $('fCat').value=existing.id; toast('Category already exists — selected it'); return; }
+  var np={ id:genId(), name:name, color:sanitizeColor(COLORS[data.properties.length % COLORS.length]), _lastModified:Date.now() };
+  data.properties.push(np); save(); populateCategorySelects(); $('fCat').value=np.id; toast('Category added');
+}
+function renameCatInline(){
+  var id=$('fCat').value; if(!id){ toast('Add a category first'); return; }
+  renameCat(id); $('fCat').value=id;   // renameCat prompts + persists; keep it selected in the editor
+}
 function changeCatColor(id,c){ var p=getProperty(id); if(!p) return; p.color=sanitizeColor(c); p._lastModified=Date.now(); save(); renderCategories(); renderList(); }
 function deleteCat(id){
   var n=data.items.filter(function(i){return i.propertyId===id;}).length;
