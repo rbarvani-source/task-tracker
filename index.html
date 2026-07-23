@@ -842,11 +842,13 @@ function computeView(){
     var cr=(b.critical?1:0)-(a.critical?1:0); if(cr) return cr;   // critical outranks highlight
     var h=(b.highlight?1:0)-(a.highlight?1:0); if(h) return h;
     var da=a.dueDate||'9999-12-31', db=b.dueDate||'9999-12-31';
-    if(order==='date-time'){ if(da!==db) return da<db?-1:1; return (a.dueTime||'99:99')<(b.dueTime||'99:99')?-1:1; }
-    if(order==='date'){ return da<db?-1:da>db?1:0; }
-    if(order==='date-property'){ if(da!==db) return da<db?-1:1; return pn(a.propertyId).localeCompare(pn(b.propertyId)); }
-    // property (default)
-    var p=pn(a.propertyId).localeCompare(pn(b.propertyId)); if(p) return p; return da<db?-1:da>db?1:0;
+    var ta=a.dueTime||'99:99', tb=b.dueTime||'99:99';
+    var tcmp = ta<tb?-1:(ta>tb?1:0);                       // time tiebreak — used in every mode so same-date tasks order by time
+    if(order==='date-time'){ if(da!==db) return da<db?-1:1; return tcmp; }
+    if(order==='date'){ if(da!==db) return da<db?-1:1; return tcmp; }                                  // date, then time
+    if(order==='date-property'){ if(da!==db) return da<db?-1:1; var pc=pn(a.propertyId).localeCompare(pn(b.propertyId)); return pc||tcmp; }  // date, category, then time
+    // property (default): category, then date, then time
+    var p=pn(a.propertyId).localeCompare(pn(b.propertyId)); if(p) return p; if(da!==db) return da<db?-1:1; return tcmp;
   });
   return items;
 }
